@@ -563,3 +563,55 @@ def test_unprintable_frames_are_left_out_of_print():
     for selector in (".mav-pdf", ".mav-3d", ".mav-embed"):
         assert selector in print_rules
     assert "display: none" in print_rules
+
+
+class TestCollapsedOption:
+    """Whether sections start folded depends on why the page exists."""
+
+    def _build(self, tmp_path, **kwargs):
+        (tmp_path / "a.md").write_text("body", encoding="utf-8")
+        (tmp_path / "b.md").write_text("body", encoding="utf-8")
+        (tmp_path / "artifact.yaml").write_text(
+            "name: x\nsections:\n"
+            "  - {type: markdown, path: a.md}\n"
+            "  - {type: markdown, path: b.md}\n",
+            encoding="utf-8",
+        )
+        return render_folder(tmp_path, **kwargs)
+
+    def _sections(self, result):
+        import re
+
+        return re.findall(r'<details class="mav-section"[^>]*>', result.html)
+
+    def test_open_by_default(self, tmp_path):
+        """The CLI shows one artifact you opened in order to look at it."""
+        sections = self._sections(self._build(tmp_path))
+        assert len(sections) == 2
+        assert all(" open" in s for s in sections)
+
+    def test_collapsed_folds_every_section(self, tmp_path):
+        """A report embedding several artifacts is easier to scan folded."""
+        sections = self._sections(self._build(tmp_path, collapsed=True))
+        assert len(sections) == 2
+        assert not any(" open" in s for s in sections)
+
+    def test_the_artifact_itself_stays_open(self, tmp_path):
+        """Folding it too would leave a page of nothing but names."""
+        result = self._build(tmp_path, collapsed=True)
+        assert '<details class="mav-artifact" open>' in result.html
+
+    def test_the_button_says_what_it_will_do(self, tmp_path):
+        assert "Collapse all</button>" in self._build(tmp_path).html
+        assert (
+            "Expand all</button>" in self._build(tmp_path, collapsed=True).html
+        )
+
+    def test_the_toggle_script_is_page_level_and_bound_once(self, tmp_path):
+        """Delegated from `document`, so it also serves artifacts injected
+        after it ran - which is how Model Explorer loads reports."""
+        result = self._build(tmp_path)
+
+        assert "mavToggleBound" in result.head
+        assert "mavToggleBound" not in result.html, "not once per artifact"
+        assert result.document().count("__mavToggleBound = true") == 1

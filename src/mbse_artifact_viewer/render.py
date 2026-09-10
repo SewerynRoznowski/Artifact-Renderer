@@ -41,7 +41,8 @@ EMBED_STYLESHEET = """
   --mav-warn-line: #c9922e;
   --mav-warn-bg: color-mix(in srgb, #c9922e 14%, transparent); }
 .mav-head { border-bottom: 1px solid var(--mav-line); margin-bottom: 1.5rem;
-  padding-bottom: .75rem; cursor: pointer; }
+  padding-bottom: .75rem; cursor: pointer; display: flex; flex-wrap: wrap;
+  gap: .3rem .75rem; align-items: baseline; }
 .mav-head h1 { margin: 0 0 .25rem; display: inline-block; }
 .mav-lede { color: var(--mav-muted); display: block; }
 .mav-section { border-top: 1px solid var(--mav-line); margin-top: 1.5rem;
@@ -55,6 +56,10 @@ EMBED_STYLESHEET = """
   gap: .3rem 1rem; align-items: baseline; justify-content: space-between;
   margin-bottom: .6rem; }
 .mav-summary-label { font-weight: 600; }
+.mav-toggle-all { font: inherit; font-size: .82em; line-height: 1;
+  padding: .3rem .55rem; margin-left: auto; cursor: pointer; color: inherit;
+  background: var(--mav-wash); border: 1px solid var(--mav-line);
+  border-radius: .25rem; }
 .mav-summary-meta { color: var(--mav-muted); font-size: .88em;
   display: flex; gap: .6rem; align-items: baseline; }
 .mav-open { white-space: nowrap; }
@@ -112,6 +117,7 @@ EMBED_STYLESHEET = """
 @media print {
   .mav-pdf, .mav-3d, .mav-embed { display: none; }
   .mav-summary, .mav-head { cursor: auto; }
+  .mav-toggle-all { display: none; }
   .mav-summary-meta::after { content: " (not printable - see the link)";
     font-style: italic; }
   .mav-section:not(:has(.mav-pdf, .mav-3d, .mav-embed)) .mav-summary-meta::after
@@ -120,6 +126,36 @@ EMBED_STYLESHEET = """
   .mav-body { overflow: visible; }
 }
 """
+
+#: One delegated listener for every "Collapse all" button on the page,
+#: installed once however many artifacts are on it. A classic script,
+#: because rendered HTML is often injected into an already-loaded
+#: document, and delegated from `document`, because it must also work for
+#: artifacts injected after it ran.
+TOGGLE_SCRIPT = """<script>
+(function () {
+  if (window.__mavToggleBound) return;
+  window.__mavToggleBound = true;
+  document.addEventListener("click", function (ev) {
+    var button = ev.target.closest("[data-mav-toggle]");
+    if (!button) return;
+    /* The button lives inside a <summary>; without this, the click
+       would also fold the artifact it belongs to. */
+    ev.preventDefault();
+    ev.stopPropagation();
+    var artifact = button.closest(".mav-artifact");
+    if (!artifact) return;
+    var sections = artifact.querySelectorAll(".mav-section");
+    var anyClosed = Array.prototype.some.call(sections, function (s) {
+      return !s.open;
+    });
+    Array.prototype.forEach.call(sections, function (s) {
+      s.open = anyClosed;
+    });
+    button.textContent = anyClosed ? "Collapse all" : "Expand all";
+  });
+})();
+</script>"""
 
 #: Typography and a palette, for a page that has none of its own - the
 #: CLI's standalone output. A host application should not use this: it
@@ -173,8 +209,17 @@ class RenderResult:
         )
 
 
-def render_artifact(source: FileSource, folder: str = "") -> RenderResult:
+def render_artifact(
+    source: FileSource, folder: str = "", *, collapsed: bool = False
+) -> RenderResult:
     """Render the artifact folder at ``folder`` (root-relative).
+
+    ``collapsed`` starts every section folded, leaving the artifact as a
+    list of labelled lines. Which is right depends on why the page
+    exists: the CLI's own pages show one artifact you opened in order to
+    look at it, so they start open; a report embedding several artifacts
+    among other content is easier to scan folded. Either way the reader
+    can change it, per section or all at once.
 
     Never raises for content problems: a folder that cannot be read at
     all comes back as an error card, and a section that cannot be
@@ -190,16 +235,18 @@ def render_artifact(source: FileSource, folder: str = "") -> RenderResult:
     parts = [
         '<article class="mav">',
         '<details class="mav-artifact" open>',
-        _head(parsed),
+        _head(parsed, collapsed),
     ]
-    head_assets: dict[str, str] = {}
+    head_assets: dict[str, str] = {"toggle": TOGGLE_SCRIPT}
     if parsed.doc:
         parts.append(
             _doc_block(source, parsed, parsed.doc, section=None)
         )
     for section in parsed.sections:
         parts.append(
-            _render_section(source, parsed, section, diagnostics, head_assets)
+            _render_section(
+                source, parsed, section, diagnostics, head_assets, collapsed
+            )
         )
     parts.append("</details>")
     parts.append("</article>")
@@ -213,7 +260,10 @@ def render_artifact(source: FileSource, folder: str = "") -> RenderResult:
 
 
 def render_folder(
-    folder: str | pathlib.Path, root: str | pathlib.Path | None = None
+    folder: str | pathlib.Path,
+    root: str | pathlib.Path | None = None,
+    *,
+    collapsed: bool = False,
 ) -> RenderResult:
     """Render a folder on disk.
 
@@ -224,17 +274,19 @@ def render_folder(
     """
     folder = pathlib.Path(folder).resolve()
     if root is None:
-        return render_artifact(LocalFileSource(folder), "")
+        return render_artifact(LocalFileSource(folder), "", collapsed=collapsed)
 
     root = pathlib.Path(root).resolve()
     try:
         relative = folder.relative_to(root)
     except ValueError:
         raise ValueError(f"{folder} is not inside root {root}") from None
-    return render_artifact(LocalFileSource(root), relative.as_posix())
+    return render_artifact(
+        LocalFileSource(root), relative.as_posix(), collapsed=collapsed
+    )
 
 
-def _head(parsed: manifest_mod.Manifest) -> str:
+def _head(parsed: manifest_mod.Manifest, collapsed: bool) -> str:
     """The artifact's summary: the name and description, always shown.
 
     It is a ``<summary>`` because the artifact is a ``<details>``:
@@ -247,9 +299,15 @@ def _head(parsed: manifest_mod.Manifest) -> str:
         if parsed.description
         else ""
     )
+    # The button sits inside the summary, where a click would otherwise
+    # toggle the artifact itself; the handler stops that.
+    toggle = (
+        f'\n<button type="button" class="mav-toggle-all" data-mav-toggle>'
+        f'{"Expand all" if collapsed else "Collapse all"}</button>'
+    )
     return (
         f'<summary class="mav-head">\n<h1>{html.escape(parsed.name)}</h1>'
-        f"{lede}\n</summary>"
+        f"{lede}{toggle}\n</summary>"
     )
 
 
@@ -287,6 +345,7 @@ def _render_section(
     section: manifest_mod.Section,
     diagnostics: list[Diagnostic],
     head_assets: dict[str, str],
+    collapsed: bool = False,
 ) -> str:
     attr = f' data-type="{html.escape(section.type)}"' if section.type else ""
 
@@ -337,7 +396,7 @@ def _render_section(
     # something they have to undo before they can read the page.
     label = section.description or _default_label(section)
     return (
-        f'<details class="mav-section"{attr} open>\n'
+        f'<details class="mav-section"{attr}{"" if collapsed else " open"}>\n'
         f'<summary class="mav-summary">'
         f'<span class="mav-summary-label">{html.escape(label)}</span>'
         f'<span class="mav-summary-meta">{html.escape(section.type)}'

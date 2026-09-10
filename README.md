@@ -171,10 +171,17 @@ one.
 
 ### Collapsing, links and printing
 
-Every artifact and every section is a `<details>`, open by default:
-collapsing is something a reader chooses, not something they have to undo
-before they can read the page. Collapsed, an artifact is its name and
-description; a section is its label and the file it came from.
+Every artifact and every section is a `<details>`. Collapsed, an artifact
+is its name and description; a section is its label and the file it came
+from. A "Collapse all" button in the artifact header folds or unfolds
+every section at once.
+
+Whether sections *start* folded is `render_artifact(..., collapsed=True)`,
+because the right answer depends on why the page exists: the CLI shows
+one artifact you opened in order to look at it, so it starts open, while
+a report embedding several artifacts among other content is easier to
+scan folded. The artifact itself always starts open — folding that too
+would leave a page of nothing but names.
 
 That header line carries a link to the section's own file — the PDF, the
 notebook, the harness YAML — opening in a new tab. Every type has one,
