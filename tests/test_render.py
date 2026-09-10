@@ -409,3 +409,58 @@ def test_a_fragment_that_mentions_html_in_a_comment_is_still_a_fragment(
     )
     assert result.ok
     assert "<p>kept</p>" in result.html
+
+
+class TestWirevizPrepend:
+    """WireViz has no cross-file include; prepending text is how it shares."""
+
+    TEMPLATE = (
+        "molex_kk_254_4p: &molex_kk_254_4p\n"
+        "  type: Molex KK 254\n"
+        "  pinlabels: [GND, '+12V']\n"
+    )
+    HARNESS = (
+        "connectors:\n"
+        "  X1:\n"
+        "    <<: *molex_kk_254_4p\n"
+        "connections:\n"
+        "  - - X1: [1, 2]\n"
+    )
+
+    def _build(self, tmp_path, options):
+        (tmp_path / "shared").mkdir(exist_ok=True)
+        (tmp_path / "shared" / "connector.yaml").write_text(
+            self.TEMPLATE, encoding="utf-8"
+        )
+        (tmp_path / "harness.yaml").write_text(self.HARNESS, encoding="utf-8")
+        (tmp_path / "artifact.yaml").write_text(
+            "name: x\nsections:\n  - type: wireviz\n    path: harness.yaml\n"
+            + options,
+            encoding="utf-8",
+        )
+        return render_folder(tmp_path)
+
+    @pytest.mark.skipif(not HAS_WIREVIZ, reason="wireviz not installed")
+    def test_a_harness_can_borrow_a_connector_definition(self, tmp_path):
+        result = self._build(
+            tmp_path,
+            "    options:\n      prepend: shared/connector.yaml\n",
+        )
+        assert result.ok
+        assert "<svg" in result.html
+        assert "GND" in result.html
+
+    @pytest.mark.skipif(not HAS_WIREVIZ, reason="wireviz not installed")
+    def test_without_it_the_undefined_anchor_is_reported(self, tmp_path):
+        result = self._build(tmp_path, "")
+        assert result.errors, "an undefined alias is not a silent empty diagram"
+
+    def test_a_missing_prepend_names_that_file_not_the_harness(self, tmp_path):
+        """The section's own path exists, so the generic message would
+        point at entirely the wrong file."""
+        result = self._build(
+            tmp_path, "    options:\n      prepend: shared/gone.yaml\n"
+        )
+        assert "prepend: 'shared/gone.yaml' does not exist" in str(
+            result.errors[0].message
+        )

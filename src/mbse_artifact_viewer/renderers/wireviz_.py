@@ -37,9 +37,9 @@ _PROLOG = re.compile(
 )
 
 
-@renderer("wireviz", options={"wrap", "designator"})
+@renderer("wireviz", options={"wrap", "designator", "prepend"})
 def render(ctx: RenderContext) -> str:
-    text = ctx.read_text(ctx.require_path())
+    text = _prepended(ctx) + ctx.read_text(ctx.require_path())
 
     wrap = str(ctx.option("wrap", "auto")).lower()
     if wrap not in {"auto", "always", "never"}:
@@ -50,6 +50,36 @@ def render(ctx: RenderContext) -> str:
         text = _wrap_template(text, str(ctx.option("designator", "X1")))
 
     return _to_svg(text)
+
+
+def _prepended(ctx: RenderContext) -> str:
+    """Text to put in front of the harness, per ``prepend:``.
+
+    WireViz has no cross-file ``!include``. The way a harness shares a
+    connector definition is that the template's text is placed in front
+    of it before parsing, so the YAML anchor is defined by the time the
+    alias is read - that is what WireViz's own ``--prepend`` flag does.
+    A harness that references ``*molex_kk_254_4p`` is not valid on its
+    own, and this is how it becomes valid.
+    """
+    prepend = ctx.option("prepend")
+    if not prepend:
+        return ""
+
+    paths = [prepend] if isinstance(prepend, str) else list(prepend)
+    parts = []
+    for path in paths:
+        try:
+            parts.append(ctx.read_text(str(path)))
+        except FileNotFoundError:
+            # Named explicitly: the section's own `path` exists, so the
+            # generic "declared file does not exist" would point at the
+            # wrong file entirely.
+            raise SectionError(
+                f"prepend: {path!r} does not exist, so the anchors this "
+                "harness references are undefined"
+            ) from None
+    return "\n".join(parts) + "\n"
 
 
 def _is_bare_template(text: str) -> bool:

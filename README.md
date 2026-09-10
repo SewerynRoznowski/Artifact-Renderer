@@ -90,7 +90,7 @@ section as well as on the artifact.
 
 | Type | Renders | Options |
 |---|---|---|
-| `wireviz` | WireViz YAML → SVG | `wrap`, `designator` |
+| `wireviz` | WireViz YAML → SVG | `wrap`, `designator`, `prepend` |
 | `markdown` | Markdown → HTML | — |
 | `html` | a fragment inline, a document in a frame | `height` |
 | `pdf` | an embedded PDF viewer | `pages`, `height` |
@@ -103,6 +103,14 @@ is detected and wrapped in a minimal self-referencing `connections:` block
 before rendering, because WireViz silently drops any connector that no
 connection set mentions. `wrap: never` turns that off; `designator: X2`
 changes the reference designator it draws under.
+
+The other half of that arrangement is `prepend:`. WireViz has no
+cross-file `!include`, so a harness that borrows a connector definition
+by YAML anchor is not valid on its own — the template's text has to go in
+front of it before parsing, which is what WireViz's own `--prepend` flag
+does. `prepend: ../../connectors/Connector-001/connector.yaml` means one
+connector definition serves every harness that terminates in it, and
+changing the pinout there changes all of them.
 
 A `pdf` section with `pages: "14-15"` shows *only* those pages: the
 selection travels in the URL and the serving side extracts them, so what
