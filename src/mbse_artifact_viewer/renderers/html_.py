@@ -18,13 +18,17 @@ _BODY = re.compile(
     r"<body\b[^>]*>(?P<body>.*?)</body\s*>", re.IGNORECASE | re.DOTALL
 )
 _IS_DOCUMENT = re.compile(r"<(?:!doctype\s+html|html)\b", re.IGNORECASE)
+_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 
 
 @renderer("html")
 def render(ctx: RenderContext) -> str:
     text = ctx.read_text(ctx.require_path())
 
-    if not _IS_DOCUMENT.search(text):
+    # Sniff with comments removed. A fragment whose comment explains what
+    # a complete document would look like is still a fragment, and the
+    # naive check calls it a document on the strength of the explanation.
+    if not _IS_DOCUMENT.search(_COMMENT.sub("", text)):
         return text
 
     match = _BODY.search(text)

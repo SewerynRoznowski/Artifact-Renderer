@@ -1,0 +1,57 @@
+# BROKEN ON PURPOSE. Not an example to copy.
+#
+# The files here all exist. What's wrong is the options, and the split
+# between warning and error is the point:
+#
+#   - a warning means the section still renders, just not exactly as
+#     asked. An option a newer manifest declares and an older renderer
+#     doesn't understand has to behave this way, or upgrading either side
+#     becomes a breaking change.
+#   - an error means the section cannot honestly be rendered at all.
+#     `pages: "two to five"` is the case that decides the rule: falling
+#     back to the whole document would quietly show all 34 pages of a
+#     specification when two were asked for, which is worse than saying so.
+
+name: "Broken: bad options"
+description: Options that are unknown, malformed, or out of range.
+
+sections:
+  # Warning. 'html' takes no options at all, so 'depth' is reported and
+  # ignored, and the drawing renders.
+  - type: html
+    path: ../../Bracket-Assembly/envelope.html
+    description: An option this type doesn't have (warning - still renders).
+    options:
+      depth: 3
+
+  # Warning. A complete HTML document rather than a fragment: the <body>
+  # is lifted out and anything in its <head> is dropped, which is said
+  # out loud because a dropped <style> would otherwise be a mystery.
+  - type: html
+    path: whole-document.html
+    description: A complete HTML document, not a fragment (warning - body is lifted out).
+
+  # Warning. Not a direction, so the default is used and the model is
+  # still shown.
+  - type: 3dmodel
+    path: ../../Bracket-Assembly/bracket-v2.glb
+    description: A camera that isn't three numbers (warning - default is used).
+    options:
+      camera: front-left
+      up: sideways
+
+  # Warning. The document has two pages; page 9 doesn't exist, so it is
+  # dropped and page 1 is still shown.
+  - type: pdf
+    path: ../../Bracket-Assembly/torque-spec.pdf
+    description: A page past the end of the document (warning - the rest still shows).
+    options:
+      pages: "1,9"
+
+  # Error. There is no honest way to show "two to five" pages, and
+  # showing all of them instead would be a silent lie.
+  - type: pdf
+    path: ../../Bracket-Assembly/torque-spec.pdf
+    description: A page selection that cannot be parsed (error - nothing is shown).
+    options:
+      pages: two to five

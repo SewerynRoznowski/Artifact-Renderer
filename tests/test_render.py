@@ -219,16 +219,64 @@ class TestExamples:
         assert "<svg" in result.html
         assert "CAN_H" in result.html
 
-    def test_the_broken_example_shows_every_problem_and_still_renders(self):
+    @pytest.mark.parametrize(
+        "name",
+        ["Harness-001", "Connector-001", "Compliance-CDS", "Bracket-Assembly"],
+    )
+    def test_the_working_examples_are_actually_clean(self, name):
+        """Not one warning between them - they are what to copy."""
+        if name in {"Harness-001", "Connector-001"} and not HAS_WIREVIZ:
+            pytest.skip("wireviz not installed")
+
+        result = render_folder(EXAMPLES / name, root=EXAMPLES)
+        assert result.diagnostics == [], f"{name} is meant to be exemplary"
+
+    def test_the_mechanical_example_shows_all_three_views(self):
         result = render_folder(EXAMPLES / "Bracket-Assembly", root=EXAMPLES)
+        assert "keep-out" in result.html, "the drawing"
+        assert 'class="mav-3d"' in result.html, "the 3D model"
+        assert 'class="mav-pdf"' in result.html, "the torque schedule"
+        assert "Witness marking" not in result.html, "page 2 was not asked for"
+
+
+class TestBrokenExamples:
+    """Broken on purpose, and named so nobody copies them."""
+
+    def _render(self, name):
+        return render_folder(EXAMPLES / "broken" / name, root=EXAMPLES)
+
+    def test_missing_files_are_each_named_on_the_page(self):
+        result = self._render("Missing-Files")
         errors = [d.message for d in result.errors]
 
-        assert "keep-out" in result.html, "the good sections still render"
-        assert 'class="mav-3d"' in result.html, "so does the 3D model"
-        assert len(errors) == 3
-        assert any("assembly-notes.md" in m for m in errors)
-        assert any("torque-spec.pdf" in m for m in errors)
-        assert any("'step'" in m for m in errors)
+        assert len(errors) == 4
+        for missing in (
+            "assembly-notes.md",
+            "harness.yaml",
+            "torque-spec.pdf",
+            "bracket.glb",
+        ):
+            assert any(missing in m for m in errors)
+            assert missing in result.html, "visible, not merely absent"
+
+    def test_an_unbuilt_type_reads_differently_from_a_typo(self):
+        result = self._render("Unknown-Types")
+        messages = " ".join(d.message for d in result.errors)
+
+        assert "unknown section type 'mardown'" in messages
+        assert "unknown section type 'step'" in messages
+        assert "'jupyter' is not implemented yet" in messages
+
+    def test_bad_options_warn_where_they_can_and_fail_where_they_cannot(self):
+        result = self._render("Bad-Options")
+        warnings = [d for d in result.diagnostics if d not in result.errors]
+
+        assert len(result.errors) == 1
+        assert "not a page or page range" in result.errors[0].message
+        assert len(warnings) >= 4
+        assert result.html.count("mav-problem-title") == 1, (
+            "one error placeholder; the four warned-about sections rendered"
+        )
 
 
 class TestModel3D:
@@ -294,3 +342,19 @@ class TestModel3D:
         result = render_folder(tmp_path)
         assert "gone.glb" in result.html
         assert result.errors
+
+
+def test_a_fragment_that_mentions_html_in_a_comment_is_still_a_fragment(
+    tmp_path,
+):
+    """The naive sniff calls a fragment a document on its own explanation."""
+    result = build(
+        tmp_path,
+        "name: x\nsections:\n  - {type: html, path: part.html}\n",
+        part__html=(
+            "<!-- unlike a complete <html> document, this is a fragment -->\n"
+            "<p>kept</p>"
+        ),
+    )
+    assert result.ok
+    assert "<p>kept</p>" in result.html

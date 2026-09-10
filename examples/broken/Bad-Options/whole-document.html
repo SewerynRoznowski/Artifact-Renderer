@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A complete document, not a fragment</title>
+<style>
+  /* This lives in <head>. It is dropped rather than embedded - one
+     section must not be able to restyle the whole page. */
+  body { background: #c00 !important; color: #fff; }
+</style>
+</head>
+<body>
+<p>This paragraph is the whole <code>&lt;body&gt;</code>, and it is what
+gets embedded. If the stylesheet above had come with it, this page would
+now be red.</p>
+</body>
+</html>

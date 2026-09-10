@@ -1,0 +1,27 @@
+# BROKEN ON PURPOSE. Not an example to copy.
+#
+# Two different situations that would look identical if the renderer
+# didn't distinguish them:
+#
+#   - a type nobody has ever implemented, which is a typo or a mistake;
+#   - a type this project has named but not built yet, where the manifest
+#     is right and the renderer is the one that hasn't caught up.
+#
+# Telling an engineer "unknown type" about a type that is simply pending
+# would send them looking for a spelling mistake that isn't there.
+
+name: "Broken: unknown and unbuilt types"
+description: A type that doesn't exist, and one that isn't built yet.
+
+sections:
+  - type: step
+    path: bracket.step
+    description: No renderer for this - a browser cannot draw B-rep CAD.
+
+  - type: mardown
+    path: notes.md
+    description: A plain typo, and the message lists the types that exist.
+
+  - type: jupyter
+    path: analysis.ipynb
+    description: Named in the spec, not implemented yet.

@@ -1,0 +1,158 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 6 0 R >>
+endobj
+5 0 obj
+<< /Length 1038 >>
+stream
+BT
+1 0 0 1 56 780 Tm
+16 TL
+/F2 18 Tf
+(Fastener Torque Schedule) Tj
+T*
+T*
+/F1 10 Tf
+(Bracket Assembly / antenna deployment mechanism) Tj
+T*
+/F1 10 Tf
+
+T*
+/F2 12 Tf
+(Position      Fastener        Torque       Preload) Tj
+T*
+/F1 10 Tf
+(-------------------------------------------------------) Tj
+T*
+/F1 10 Tf
+(M4-1          M4x12 A2-70     2.8 Nm       +/- 0.2 Nm) Tj
+T*
+/F1 10 Tf
+(M4-2          M4x12 A2-70     2.8 Nm       +/- 0.2 Nm) Tj
+T*
+/F1 10 Tf
+(Base-1..4     M3x8  A2-70     1.2 Nm       +/- 0.1 Nm) Tj
+T*
+/F1 10 Tf
+
+T*
+/F2 12 Tf
+(Sequence) Tj
+T*
+/F1 10 Tf
+(1. Seat all fasteners hand-tight before torquing.) Tj
+T*
+/F1 10 Tf
+(2. Torque the base fasteners diagonally, then the M4 pair.) Tj
+T*
+/F1 10 Tf
+(3. Re-check the base fasteners after the M4 pair is set.) Tj
+T*
+/F1 10 Tf
+
+T*
+/F2 12 Tf
+(Lubrication) Tj
+T*
+/F1 10 Tf
+(Dry. Values assume no thread lubricant. A lubricated) Tj
+T*
+/F1 10 Tf
+(thread reaches the same preload at roughly 70% of the) Tj
+T*
+/F1 10 Tf
+(torque above, so do not substitute without recalculating.) Tj
+T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Length 805 >>
+stream
+BT
+1 0 0 1 56 780 Tm
+16 TL
+/F2 18 Tf
+(Inspection and Rework) Tj
+T*
+T*
+/F1 10 Tf
+(Page 2 of the torque schedule) Tj
+T*
+/F1 10 Tf
+
+T*
+/F2 12 Tf
+(Witness marking) Tj
+T*
+/F1 10 Tf
+(Mark every torqued fastener with a continuous line across) Tj
+T*
+/F1 10 Tf
+(the head, washer and substrate. A broken line at a later) Tj
+T*
+/F1 10 Tf
+(inspection means the joint moved and must be re-torqued.) Tj
+T*
+/F1 10 Tf
+
+T*
+/F2 12 Tf
+(Rework limits) Tj
+T*
+/F1 10 Tf
+(Two re-torques per position. A third means the insert is) Tj
+T*
+/F1 10 Tf
+(replaced, not the fastener.) Tj
+T*
+/F1 10 Tf
+
+T*
+/F2 12 Tf
+(Records) Tj
+T*
+/F1 10 Tf
+(Log the wrench serial number and calibration date against) Tj
+T*
+/F1 10 Tf
+(each assembly serial. Torque values without a traceable) Tj
+T*
+/F1 10 Tf
+(wrench are not acceptance evidence.) Tj
+T*
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+8 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000000263 00000 n 
+0000000399 00000 n 
+0000001489 00000 n 
+0000002345 00000 n 
+0000002415 00000 n 
+trailer
+<< /Size 9 /Root 1 0 R >>
+startxref
+2490
+%%EOF

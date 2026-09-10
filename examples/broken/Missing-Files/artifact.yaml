@@ -1,0 +1,31 @@
+# BROKEN ON PURPOSE. Not an example to copy.
+#
+# Every section below names a file that does not exist. Each one is
+# replaced, in place, by a note saying what was declared and what went
+# wrong - the point being that a declared artifact which isn't there has
+# to be *visible* on the page, not merely absent from it.
+#
+# The manifest itself is valid, so the artifact still has a title, a
+# description, and four labelled slots. Only an unreadable artifact.yaml
+# is fatal, and only for its own folder.
+
+name: "Broken: missing files"
+description: Every section points at a file that isn't there.
+doc: no-such-intro.md
+
+sections:
+  - type: markdown
+    path: assembly-notes.md
+    description: A missing Markdown file.
+
+  - type: wireviz
+    path: harness.yaml
+    description: A missing WireViz source.
+
+  - type: pdf
+    path: torque-spec.pdf
+    description: A missing PDF.
+
+  - type: 3dmodel
+    path: bracket.glb
+    description: A missing 3D model.
