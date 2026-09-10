@@ -59,6 +59,8 @@ EMBED_STYLESHEET = """
 .mav-3d { width: 100%; border: 1px solid var(--mav-line);
   background: var(--mav-wash); overflow: hidden; touch-action: none; }
 .mav-3d canvas { display: block; }
+.mav-3d-fallback { color: var(--mav-muted); font-size: .92em; margin: 0;
+  padding: 1.2rem; text-align: center; }
 /* A framed document paints its own background; white is the safe ground
    for one that does not, since its text will be dark by default. */
 .mav-embed { width: 100%; border: 1px solid var(--mav-line); display: block;

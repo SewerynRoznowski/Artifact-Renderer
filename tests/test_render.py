@@ -359,9 +359,29 @@ class TestModel3D:
         )
         result = render_folder(tmp_path)
 
-        assert result.html.count("importmap") == 0, "belongs in head, not body"
-        assert result.head.count("importmap") == 1, "once, not once per model"
-        assert result.document().count("importmap") == 1
+        # No import map anywhere, and no bare specifiers that would need
+        # one. A host that injects rendered HTML into a live page (Model
+        # Explorer swaps reports in with htmx) cannot register an import
+        # map in time, so the module would never resolve, never run, and
+        # leave an empty box with nothing said about why.
+        assert "importmap" not in result.document()
+        assert 'from "three"' not in result.html
+        assert 'from "three/addons/' not in result.html
+        assert result.html.count("https://esm.sh/three@") == 8, "4 per model"
+
+    def test_a_viewer_that_never_starts_says_so_in_markup(self, tmp_path):
+        """The failure notice cannot be script's job.
+
+        A module that fails to load never runs, so anything it would have
+        said is never said. The fallback is markup the viewer clears on
+        success.
+        """
+        result = self._folder(tmp_path)
+
+        assert "mav-3d-fallback" in result.html
+        assert "The 3D viewer did not start" in result.html
+        assert "download" in result.html, "and the file is still reachable"
+        assert "mount.replaceChildren();" in result.html, "cleared on success"
 
     def test_a_step_file_says_to_export_gltf(self, tmp_path):
         result = self._folder(tmp_path, name="part.step")

@@ -32,34 +32,47 @@ from ..sources import url_for
 #: MAV_THREE_BASE at a vendored copy of the same layout (``build/`` and
 #: ``examples/jsm/`` beneath it) and nothing else changes.
 THREE_VERSION = "0.169.0"
+
+#: Where the viewer's modules come from. esm.sh rather than a plain CDN
+#: for one specific reason: three.js addons (GLTFLoader, OrbitControls)
+#: import the bare specifier "three", which a browser can only resolve
+#: through an import map - and an import map is useless here. The spec
+#: requires one to be present before any module loads, so a page that
+#: injects rendered HTML into a live document (Model Explorer swaps
+#: reports in with htmx) can never register one in time. The module then
+#: fails to resolve, never runs, and the viewer is a silent empty box.
+#:
+#: esm.sh rewrites those bare specifiers to absolute URLs, so every
+#: import here is fully qualified and no import map is needed at all.
+#:
+#: Override for a network that cannot reach a CDN - a vendored copy must
+#: serve the same layout with its own imports already rewritten.
 THREE_BASE = os.environ.get(
-    "MAV_THREE_BASE",
-    f"https://cdn.jsdelivr.net/npm/three@{THREE_VERSION}",
+    "MAV_THREE_BASE", f"https://esm.sh/three@{THREE_VERSION}"
 )
 
 EXTENSIONS = (".glb", ".gltf")
 DEFAULT_HEIGHT = 480
 
-_IMPORT_MAP = """<script type="importmap">
-{{"imports": {{
-  "three": "{base}/build/three.module.js",
-  "three/addons/": "{base}/examples/jsm/"
-}}}}
-</script>"""
-
 _VIEWER = """<script type="module">
-import * as THREE from "three";
-import {{ GLTFLoader }} from "three/addons/loaders/GLTFLoader.js";
-import {{ OrbitControls }} from "three/addons/controls/OrbitControls.js";
-import {{ RoomEnvironment }} from "three/addons/environments/RoomEnvironment.js";
+import * as THREE from "{base}";
+import {{ GLTFLoader }} from "{base}/examples/jsm/loaders/GLTFLoader.js";
+import {{ OrbitControls }} from "{base}/examples/jsm/controls/OrbitControls.js";
+import {{ RoomEnvironment }} from "{base}/examples/jsm/environments/RoomEnvironment.js";
 
 const mount = document.getElementById("{id}");
 const fail = (message) => {{
-  mount.innerHTML = '<p class="mav-problem-detail"></p>';
-  mount.firstChild.textContent = message;
+  const note = document.createElement("p");
+  note.className = "mav-3d-fallback";
+  note.textContent = message;
+  mount.replaceChildren(note);
 }};
 
 try {{
+  // Clears the static fallback below. If this module never runs - no
+  // WebGL, no network, a blocked CDN - that fallback stays on the page,
+  // which is the whole point of it being markup rather than script.
+  mount.replaceChildren();
   const renderer = new THREE.WebGLRenderer({{ antialias: true, alpha: true }});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(mount.clientWidth, mount.clientHeight);
@@ -140,14 +153,26 @@ def render(ctx: RenderContext) -> str:
             "be displayed - it needs a FileSource with url_for()"
         )
 
-    ctx.require_head("three", _IMPORT_MAP.format(base=THREE_BASE))
-
     mount = f"mav-3d-{abs(hash((ctx.folder, ctx.section.index))):x}"
+    name = path.rpartition("/")[2]
+
+    # The fallback is *markup*, not something script writes on failure.
+    # A module that fails to load never runs, so anything it would have
+    # said is never said - which is how this type managed to render an
+    # empty grey box. The viewer clears this as its first act; if it
+    # never runs, the reader is told, and can still take the file.
+    fallback = (
+        f'<p class="mav-3d-fallback">The 3D viewer did not start. '
+        f'<a href="{html.escape(url)}" download>Download {html.escape(name)}</a>'
+        f" and open it in a glTF viewer.</p>"
+    )
+
     return (
         f'<div class="mav-3d" id="{mount}" '
-        f'style="height:{_height(ctx)}px"></div>\n'
+        f'style="height:{_height(ctx)}px">{fallback}</div>\n'
         + _VIEWER.format(
             id=mount,
+            base=THREE_BASE,
             url=html.escape(url, quote=True),
             up=_up(ctx),
             camera=_camera(ctx),
