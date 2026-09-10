@@ -157,9 +157,13 @@ If your source of truth is STEP, [tools/step_to_glb.py](tools/step_to_glb.py)
 tessellates it at build time (`pip install cascadio`), which is where that
 work belongs: once, in the repo that owns the CAD, rather than on every
 page view in a deployment that would then need a CAD kernel.
-[examples/Converted-CAD](examples/Converted-CAD) is the worked example. `camera` is the *direction* to look from rather than a position,
-so the same `[1, 1, 1]` frames a 4 mm connector and a 3 m panel — the
-distance is fitted to the model.
+[examples/Converted-CAD](examples/Converted-CAD) is the worked example.
+
+`camera` is the *direction* to look from rather than a position, so the
+same `[1, 1, 1]` frames a 4 mm connector and a 3 m panel — the distance
+is fitted to the model. The viewer has a Fullscreen button; there is no
+separate tab, since that would mean another page to serve and another
+WebGL context for the same pixels.
 
 An option this renderer doesn't understand is a warning, never an error,
 so a manifest written against a newer version stays usable on an older
