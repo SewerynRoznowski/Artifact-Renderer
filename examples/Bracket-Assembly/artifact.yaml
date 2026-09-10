@@ -1,0 +1,48 @@
+# This example is deliberately broken in several ways at once. It exists
+# to show what a page does when things are missing: every problem below
+# is visible on the rendered page, in the slot where the content should
+# have been, and none of them stop the sections around them rendering.
+
+name: Bracket Assembly
+description: Mounting bracket for the antenna deployment mechanism.
+
+sections:
+  # Renders. A complete HTML document, so its <body> is lifted out.
+  - type: html
+    path: envelope.html
+    description: Keep-out envelope, plan view.
+
+  # Renders, and warns: 'depth' is not an option the html renderer knows.
+  # A manifest written against a newer renderer stays usable on an older
+  # one, so an unknown option is a warning, never an error.
+  - type: html
+    path: envelope.html
+    description: The same drawing, declaring an option nobody understands.
+    options:
+      depth: 3
+
+  # Placeholder: a Phase 2 type, not implemented yet. The manifest is
+  # valid - it is the renderer that hasn't caught up.
+  - type: pdf
+    path: torque-spec.pdf
+    description: Fastener torque schedule.
+    options:
+      pages: "1-3"
+
+  - type: 3dmodel
+    path: bracket-v2.glb
+    description: As-built revision, superseding the v1 bracket.
+    options:
+      camera: [0.4, 0.3, 1.2]
+      up: z
+
+  # Placeholder: declared, and simply not there. This is the case the
+  # whole error design exists for - a missing artifact has to be visible
+  # on the page, not silently absent from it.
+  - type: markdown
+    path: assembly-notes.md
+    description: Assembly sequence.
+
+  # Placeholder: a type this renderer has never heard of.
+  - type: step
+    path: bracket-v2.step

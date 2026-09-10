@@ -1,0 +1,28 @@
+connectors:
+  X1:
+    type: Molex KK 254
+    subtype: female
+    pinlabels: [GND, "+12V", CAN_H, CAN_L]
+    notes: Controller end
+
+  X2:
+    type: Molex KK 254
+    subtype: female
+    pinlabels: [GND, "+12V", CAN_H, CAN_L]
+    notes: Sensor end
+
+cables:
+  W1:
+    gauge: 0.5
+    gauge_unit: mm2
+    length: 0.3
+    length_unit: m
+    color_code: DIN
+    wirecount: 4
+    shield: true
+    notes: Shield bonded at the controller end only
+
+connections:
+  - - X1: [1, 2, 3, 4]
+    - W1: [1, 2, 3, 4]
+    - X2: [1, 2, 3, 4]

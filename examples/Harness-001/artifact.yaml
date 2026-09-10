@@ -1,0 +1,19 @@
+name: Harness-001
+description: 4-wire power/CAN harness between two Molex KK 254 connectors.
+doc: overview.md
+
+sections:
+  - type: wireviz
+    path: harness.yaml
+    description: Wire colours and pin assignments as built.
+
+  - type: markdown
+    path: notes.md
+    description: Assembly and inspection notes.
+
+  # Reaches out of this folder into the repository's shared datasheet
+  # collection - one copy, referenced by every harness that uses the part,
+  # instead of a duplicate here that goes stale the first time it changes.
+  - type: markdown
+    path: ../datasheets/molex-kk-254.md
+    description: Connector datasheet extract (shared, not a copy).

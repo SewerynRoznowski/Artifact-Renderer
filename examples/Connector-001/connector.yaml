@@ -1,0 +1,17 @@
+# Reusable connector definition, meant to be shared across every harness
+# that terminates in this connector - not a complete WireViz harness on
+# its own (no `connectors`/`cables`/`connections` top-level keys here).
+#
+# A harness file pulls this in via a YAML merge key, e.g.:
+#
+#   connectors:
+#     X1:
+#       <<: *molex_kk_254_4p
+#
+# ...after this file's text has been prepended to the harness file's text.
+# WireViz has no cross-file `!include` of its own.
+
+molex_kk_254_4p: &molex_kk_254_4p
+  type: Molex KK 254
+  subtype: female
+  pinlabels: [GND, "+12V", CAN_H, CAN_L]

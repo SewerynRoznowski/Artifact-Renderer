@@ -1,0 +1,14 @@
+name: Connector-001
+description: >
+  Reusable connector template - Molex KK 254, female, 4 pins
+  (GND, +12V, CAN_H, CAN_L). Shared by every harness that terminates in
+  this connector.
+
+sections:
+  # connector.yaml is a bare template, not a complete harness. The
+  # renderer detects that and wraps it in a minimal self-referencing
+  # connections: block, because WireViz silently drops any connector no
+  # connection set mentions. Set `options: {wrap: never}` to turn that off.
+  - type: wireviz
+    path: connector.yaml
+    description: The connector on its own, pin numbering as viewed from the mating face.

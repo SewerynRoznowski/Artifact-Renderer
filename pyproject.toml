@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mbse-artifact-viewer"
+version = "0.1.0"
+description = "Render an engineering artifact folder described by an artifact.yaml manifest."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Seweryn Roznowski" }]
+keywords = ["mbse", "wireviz", "documentation", "artifacts"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Typing :: Typed",
+]
+dependencies = [
+  "PyYAML>=6.0",
+  "markdown-it-py>=3.0",
+]
+
+[project.optional-dependencies]
+# WireViz pulls in graphviz, which a mechanical or software team rendering
+# PDFs and 3D models has no use for. Missing it degrades to a placeholder
+# on wireviz sections only - it never stops the rest of a page rendering.
+wireviz = ["wireviz>=0.4.1"]
+
+[project.scripts]
+mav = "mbse_artifact_viewer.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
