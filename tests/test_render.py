@@ -271,6 +271,7 @@ class TestExamples:
             "Compliance-CDS",
             "Bracket-Assembly",
             "ANA-001",
+            "Converted-CAD",
         ],
     )
     def test_the_working_examples_are_actually_clean(self, name):

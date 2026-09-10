@@ -1,0 +1,34 @@
+name: Converted CAD
+description: Three STEP files, tessellated to glTF at build time and shown in the viewer.
+doc: about.md
+
+sections:
+  # All three point into ../steps/.build/ - generated output, beside the
+  # STEP sources it came from, referenced rather than copied. `up: z`
+  # because STEP is Z-up and nothing in the conversion rotates it.
+  - type: 3dmodel
+    path: ../steps/.build/Hexagon Nut DIN 934 - M3 x 0.5 Steel 6 Plain.glb
+    description: DIN 934 M3 nut — 21 KB of glTF, and the part that proves the units are right.
+    options:
+      up: z
+      camera: [1, 0.8, 0.6]
+      height: 360
+
+  - type: 3dmodel
+    path: ../steps/.build/bauform1.glb
+    description: bauform1 — a five-part housing, 80 × 137 × 61 mm.
+    options:
+      up: z
+      camera: [1, 1, 0.7]
+
+  - type: 3dmodel
+    path: ../steps/.build/PROC048A_STEP.glb
+    description: PROC048A — 483 parts from a 14 MB STEP, at 0.2 mm tolerance.
+    options:
+      up: z
+      camera: [0.6, 0.9, 1]
+      height: 620
+
+  - type: markdown
+    path: conversion.md
+    description: What each conversion cost, and the tolerance that produced it.
