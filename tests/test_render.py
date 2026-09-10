@@ -348,26 +348,25 @@ class TestModel3D:
         assert 'class="mav-3d"' in result.html
         assert "GLTFLoader" in result.html
 
-    def test_the_import_map_is_page_level_and_emitted_once(self, tmp_path):
-        (tmp_path / "a.glb").write_bytes(b"glTF")
-        (tmp_path / "b.glb").write_bytes(b"glTF")
-        (tmp_path / "artifact.yaml").write_text(
-            "name: x\nsections:\n"
-            "  - {type: 3dmodel, path: a.glb}\n"
-            "  - {type: 3dmodel, path: b.glb}\n",
-            encoding="utf-8",
-        )
-        result = render_folder(tmp_path)
+    def test_the_viewer_survives_being_injected_into_a_live_page(
+        self, tmp_path
+    ):
+        """A classic script with dynamic import(), for two reasons.
 
-        # No import map anywhere, and no bare specifiers that would need
-        # one. A host that injects rendered HTML into a live page (Model
-        # Explorer swaps reports in with htmx) cannot register an import
-        # map in time, so the module would never resolve, never run, and
-        # leave an empty box with nothing said about why.
+        A host that injects rendered HTML into an already-loaded document
+        (Model Explorer swaps reports in with htmx) cannot register an
+        import map in time, so a static `import ... from "three"` never
+        resolves. And a module that fails to load never runs, so it
+        cannot report its own failure - dynamic import() rejects, which
+        this code can catch.
+        """
+        result = self._folder(tmp_path)
+
         assert "importmap" not in result.document()
+        assert 'type="module"' not in result.html
         assert 'from "three"' not in result.html
-        assert 'from "three/addons/' not in result.html
-        assert result.html.count("https://esm.sh/three@") == 8, "4 per model"
+        assert "import(base" in result.html, "dynamic, so failure is catchable"
+        assert ".catch(" in result.html
 
     def test_a_viewer_that_never_starts_says_so_in_markup(self, tmp_path):
         """The failure notice cannot be script's job.

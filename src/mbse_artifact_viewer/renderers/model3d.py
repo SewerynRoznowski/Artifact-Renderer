@@ -54,80 +54,114 @@ THREE_BASE = os.environ.get(
 EXTENSIONS = (".glb", ".gltf")
 DEFAULT_HEIGHT = 480
 
-_VIEWER = """<script type="module">
-import * as THREE from "{base}";
-import {{ GLTFLoader }} from "{base}/examples/jsm/loaders/GLTFLoader.js";
-import {{ OrbitControls }} from "{base}/examples/jsm/controls/OrbitControls.js";
-import {{ RoomEnvironment }} from "{base}/examples/jsm/environments/RoomEnvironment.js";
+_VIEWER = """<script>
+/* A classic script rather than a module script, and that is the whole
+   point of its shape. Rendered HTML gets injected into an already-loaded
+   page (Model Explorer swaps reports in with htmx), where an import map
+   can no longer be registered - so a static import of a bare specifier
+   never resolves and the module never runs. Loading three.js here with
+   dynamic import() needs no import map, and, unlike a static import,
+   rejects in a way this code can catch and report. */
+(function () {{
+  var mount = document.getElementById("{id}");
+  if (!mount) return;
 
-const mount = document.getElementById("{id}");
-const fail = (message) => {{
-  const note = document.createElement("p");
-  note.className = "mav-3d-fallback";
-  note.textContent = message;
-  mount.replaceChildren(note);
-}};
+  function fail(message) {{
+    var note = document.createElement("p");
+    note.className = "mav-3d-fallback";
+    note.textContent = message;
+    var link = document.createElement("a");
+    link.href = "{url}";
+    link.setAttribute("download", "");
+    link.textContent = "Download the model";
+    note.appendChild(document.createTextNode(" "));
+    note.appendChild(link);
+    mount.replaceChildren(note);
+  }}
 
-try {{
-  // Clears the static fallback below. If this module never runs - no
-  // WebGL, no network, a blocked CDN - that fallback stays on the page,
-  // which is the whole point of it being markup rather than script.
-  mount.replaceChildren();
-  const renderer = new THREE.WebGLRenderer({{ antialias: true, alpha: true }});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(mount.clientWidth, mount.clientHeight);
-  mount.appendChild(renderer.domElement);
-
-  const scene = new THREE.Scene();
-  // An environment map, not just lights: an unlit metallic PBR material
-  // renders as a black blob, which is a poor look for a bracket.
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
-  const key = new THREE.DirectionalLight(0xffffff, 1.4);
-  key.position.set(1, 2, 1.5);
-  scene.add(key);
-
-  const camera = new THREE.PerspectiveCamera(
-    45, mount.clientWidth / mount.clientHeight, 0.01, 1000
-  );
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-
-  new GLTFLoader().load("{url}", (gltf) => {{
-    const model = gltf.scene;
-    {up}
-    scene.add(model);
-
-    // Frame whatever turned up: a model may be millimetres or metres,
-    // centred on the origin or a long way off it.
-    const box = new THREE.Box3().setFromObject(model);
-    const size = box.getSize(new THREE.Vector3()).length() || 1;
-    const centre = box.getCenter(new THREE.Vector3());
-    const direction = new THREE.Vector3({camera}).normalize();
-
-    camera.near = size / 100;
-    camera.far = size * 100;
-    camera.position.copy(centre).addScaledVector(direction, size);
-    camera.updateProjectionMatrix();
-    controls.target.copy(centre);
-    controls.update();
-  }}, undefined, (err) => fail("This model could not be loaded: " + err));
-
-  new ResizeObserver(() => {{
-    if (!mount.clientWidth) return;
-    camera.aspect = mount.clientWidth / mount.clientHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(mount.clientWidth, mount.clientHeight);
-  }}).observe(mount);
-
-  renderer.setAnimationLoop(() => {{
-    controls.update();
-    renderer.render(scene, camera);
+  var base = "{base}";
+  Promise.all([
+    import(base),
+    import(base + "/examples/jsm/loaders/GLTFLoader.js"),
+    import(base + "/examples/jsm/controls/OrbitControls.js"),
+    import(base + "/examples/jsm/environments/RoomEnvironment.js")
+  ]).then(function (mods) {{
+    start(mods[0], mods[1].GLTFLoader, mods[2].OrbitControls,
+          mods[3].RoomEnvironment);
+  }}).catch(function (err) {{
+    fail("The 3D viewer could not load three.js from " + base + " (" + err +
+         "). If this machine cannot reach the internet, point MAV_THREE_BASE " +
+         "at a local copy.");
   }});
-}} catch (err) {{
-  fail("This browser could not start a 3D viewer: " + err);
-}}
+
+  function start(THREE, GLTFLoader, OrbitControls, RoomEnvironment) {{
+    var renderer;
+    try {{
+      renderer = new THREE.WebGLRenderer({{ antialias: true, alpha: true }});
+    }} catch (err) {{
+      fail("This browser could not open a WebGL context (" + err +
+           "). Check that hardware acceleration is enabled.");
+      return;
+    }}
+    /* Only now is the static fallback removed: everything that could
+       fail has succeeded, so there is always either a viewer or a
+       reason on the page. */
+    mount.replaceChildren();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(mount.clientWidth, mount.clientHeight);
+    mount.appendChild(renderer.domElement);
+
+    var scene = new THREE.Scene();
+    /* An environment map, not just lights: an unlit metallic PBR
+       material renders as a black blob. */
+    var pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
+    var key = new THREE.DirectionalLight(0xffffff, 1.4);
+    key.position.set(1, 2, 1.5);
+    scene.add(key);
+
+    var camera = new THREE.PerspectiveCamera(
+      45, (mount.clientWidth || 1) / (mount.clientHeight || 1), 0.01, 1000
+    );
+    var controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    new GLTFLoader().load("{url}", function (gltf) {{
+      var model = gltf.scene;
+      {up}
+      scene.add(model);
+
+      /* Frame whatever turned up: a model may be millimetres or metres,
+         centred on the origin or a long way off it. */
+      var box = new THREE.Box3().setFromObject(model);
+      var size = box.getSize(new THREE.Vector3()).length() || 1;
+      var centre = box.getCenter(new THREE.Vector3());
+      var direction = new THREE.Vector3({camera}).normalize();
+
+      camera.near = size / 100;
+      camera.far = size * 100;
+      camera.position.copy(centre).addScaledVector(direction, size);
+      camera.updateProjectionMatrix();
+      controls.target.copy(centre);
+      controls.update();
+    }}, undefined, function (err) {{
+      fail("This model could not be loaded (" + err + ").");
+    }});
+
+    new ResizeObserver(function () {{
+      if (!mount.clientWidth) return;
+      camera.aspect = mount.clientWidth / mount.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(mount.clientWidth, mount.clientHeight);
+    }}).observe(mount);
+
+    renderer.setAnimationLoop(function () {{
+      controls.update();
+      renderer.render(scene, camera);
+    }});
+  }}
+}})();
 </script>"""
 
 
