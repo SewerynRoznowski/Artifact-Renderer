@@ -26,13 +26,22 @@ from .errors import ArtifactError, Diagnostic, Level, PathError, SectionError
 from .manifest import MANIFEST_NAME, Manifest, Section
 from .manifest import load as load_manifest
 from .registry import RenderContext, known_types, renderer
-from .render import STYLESHEET, RenderResult, render_artifact, render_folder
+from .render import (
+    EMBED_STYLESHEET,
+    PAGE_STYLESHEET,
+    STYLESHEET,
+    RenderResult,
+    render_artifact,
+    render_folder,
+)
 from .sources import FileSource, LocalFileSource
 
 __version__ = "0.1.0"
 
 __all__ = [
+    "EMBED_STYLESHEET",
     "MANIFEST_NAME",
+    "PAGE_STYLESHEET",
     "STYLESHEET",
     "ArtifactError",
     "Diagnostic",

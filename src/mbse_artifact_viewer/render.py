@@ -23,45 +23,54 @@ from .errors import ArtifactError, Diagnostic, Level, SectionError
 from .renderers import markdown_
 from .sources import FileSource, LocalFileSource
 
-STYLESHEET = """
-.mav { --mav-fg: #1a1d21; --mav-muted: #5c6570; --mav-line: #dfe3e8;
-  --mav-bg: #ffffff; --mav-warn-bg: #fff6e5; --mav-warn-line: #e0a33a;
-  color: var(--mav-fg); background: var(--mav-bg);
-  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
-@media (prefers-color-scheme: dark) {
-  .mav { --mav-fg: #e6e8ea; --mav-muted: #9aa4af; --mav-line: #343a41;
-    --mav-bg: #16191c; --mav-warn-bg: #3a2f18; --mav-warn-line: #c9922e; } }
+EMBED_STYLESHEET = """
+/* Structure only: sizes, borders, spacing, and the frames that content
+   is shown in. No font, no text colour, no background on the article -
+   an embedded fragment must look like part of the page it is embedded
+   in, and the host has already decided what that looks like.
+
+   Every colour here is derived from `currentColor`, so a border is a
+   faint version of whatever the host's text colour happens to be. That
+   is what makes this work in a dark theme without knowing how the host
+   switches themes: Model Explorer toggles a `dark` class, this package's
+   own pages use prefers-color-scheme, and neither has to be detected. */
+.mav { --mav-line: color-mix(in srgb, currentColor 22%, transparent);
+  --mav-muted: color-mix(in srgb, currentColor 65%, transparent);
+  --mav-wash: color-mix(in srgb, currentColor 6%, transparent);
+  --mav-warn-line: #c9922e;
+  --mav-warn-bg: color-mix(in srgb, #c9922e 14%, transparent); }
 .mav-head { border-bottom: 1px solid var(--mav-line); margin-bottom: 1.5rem;
   padding-bottom: .75rem; }
-.mav-head h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+.mav-head h1 { margin: 0 0 .25rem; }
 .mav-lede { color: var(--mav-muted); margin: 0; }
 .mav-section { border-top: 1px solid var(--mav-line); margin-top: 1.5rem;
   padding-top: 1.25rem; }
 .mav-section:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
-.mav-caption { color: var(--mav-muted); font-size: .92rem; margin: 0 0 .6rem; }
+.mav-caption { color: var(--mav-muted); font-size: .92em; margin: 0 0 .6rem; }
 .mav-body { overflow-x: auto; }
 .mav-body svg, .mav-body img { max-width: 100%; height: auto; }
 .mav-body table { border-collapse: collapse; }
 .mav-body th, .mav-body td { border: 1px solid var(--mav-line);
   padding: .3rem .55rem; text-align: left; }
-.mav-body pre { background: color-mix(in srgb, var(--mav-fg) 6%, transparent);
-  overflow-x: auto; padding: .7rem .9rem; }
-.mav-pdf { width: 100%; border: 1px solid var(--mav-line);
-  background: var(--mav-bg); display: block; }
+.mav-body pre { background: var(--mav-wash); overflow-x: auto;
+  padding: .7rem .9rem; }
+.mav-pdf { width: 100%; border: 1px solid var(--mav-line); display: block;
+  background: #fff; }
 .mav-3d { width: 100%; border: 1px solid var(--mav-line);
-  background: color-mix(in srgb, var(--mav-fg) 4%, transparent);
-  overflow: hidden; touch-action: none; }
+  background: var(--mav-wash); overflow: hidden; touch-action: none; }
 .mav-3d canvas { display: block; }
-.mav-embed { width: 100%; border: 1px solid var(--mav-line);
-  background: #fff; display: block; }
+/* A framed document paints its own background; white is the safe ground
+   for one that does not, since its text will be dark by default. */
+.mav-embed { width: 100%; border: 1px solid var(--mav-line); display: block;
+  background: #fff; }
 .mav-nb-out { margin: .6rem 0; overflow-x: auto; }
 .mav-nb-out img, .mav-nb-out svg { max-width: 100%; height: auto; }
-.mav-nb-out table { border-collapse: collapse; font-size: .92rem; }
+.mav-nb-out table { border-collapse: collapse; font-size: .92em; }
 .mav-nb-out th, .mav-nb-out td { border: 1px solid var(--mav-line);
   padding: .25rem .5rem; text-align: left; }
-.mav-nb-source, .mav-nb-text, .mav-nb-err { font-size: .88rem;
+.mav-nb-source, .mav-nb-text, .mav-nb-err { font-size: .88em;
   overflow-x: auto; padding: .6rem .8rem; margin: .5rem 0;
-  background: color-mix(in srgb, var(--mav-fg) 6%, transparent); }
+  background: var(--mav-wash); }
 .mav-nb-source { border-left: 3px solid var(--mav-line); }
 .mav-nb-err { background: var(--mav-warn-bg);
   border-left: 3px solid var(--mav-warn-line); }
@@ -70,9 +79,24 @@ STYLESHEET = """
 .mav-problem p { margin: 0 0 .3rem; }
 .mav-problem p:last-child { margin-bottom: 0; }
 .mav-problem-title { font-weight: 600; }
-.mav-problem-detail { color: var(--mav-muted); font-size: .92rem; }
+.mav-problem-detail { color: var(--mav-muted); font-size: .92em; }
 .mav-problem code { font-size: .92em; }
 """
+
+#: Typography and a palette, for a page that has none of its own - the
+#: CLI's standalone output. A host application should not use this: it
+#: would be overriding decisions the host has already made.
+PAGE_STYLESHEET = """
+.mav { color: #1a1d21; background: #ffffff;
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.mav-head h1 { font-size: 1.5rem; }
+@media (prefers-color-scheme: dark) {
+  .mav { color: #e6e8ea; background: #16191c; } }
+"""
+
+#: Everything, for a standalone page. Kept under the original name
+#: because that is what :meth:`RenderResult.document` needs.
+STYLESHEET = PAGE_STYLESHEET + EMBED_STYLESHEET
 
 
 @dataclasses.dataclass
