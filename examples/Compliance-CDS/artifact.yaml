@@ -1,0 +1,19 @@
+name: CubeSat Design Specification
+description: Rev 14.1 — the launch-provider requirements this design is verified against.
+doc: about.md
+
+sections:
+  # 34 pages live in the shared datasheets folder; two of them are the
+  # ones an electrical reviewer needs. `pages:` means *only* those two -
+  # the served document is two pages long, not a 34-page one scrolled to
+  # page 14.
+  - type: pdf
+    path: ../datasheets/CDS+REV14_1+2022-02-09-1.pdf
+    description: Section 2.3, Electrical Specifications — inhibits, deployment switches, RBF pins.
+    options:
+      pages: "14-15"
+      height: 900
+
+  - type: pdf
+    path: ../datasheets/CDS+REV14_1+2022-02-09-1.pdf
+    description: The full specification, all 34 pages, for anything the extract above doesn't cover.

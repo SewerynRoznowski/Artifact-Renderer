@@ -84,6 +84,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
         host=args.host,
         port=args.port,
         live_reload=not args.no_reload,
+        open_browser=not args.no_open,
     )
     return 0
 
@@ -141,6 +142,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     serve.add_argument(
         "--no-reload", action="store_true", help="disable the reload poll"
+    )
+    serve.add_argument(
+        "--no-open",
+        action="store_true",
+        help="don't open a browser window",
     )
     serve.set_defaults(func=cmd_serve)
 

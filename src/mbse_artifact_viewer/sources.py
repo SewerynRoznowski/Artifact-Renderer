@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import pathlib
 import typing as t
+import urllib.parse
 
 
 class FileSource(t.Protocol):
@@ -30,6 +31,29 @@ class FileSource(t.Protocol):
     def exists(self, path: str) -> bool:
         """Whether ``path`` (root-relative POSIX) can be read."""
         ...
+
+    # Optional. A source may also implement:
+    #
+    #     def url_for(self, path, params=None) -> str
+    #
+    # returning a URL the *browser* can fetch that file from. Some
+    # content cannot be inlined into the page - a browser will not open a
+    # PDF handed to it as a data: URI - so those section types need a real
+    # file-serving route, and only the consumer knows its URL space. A
+    # source without this method simply cannot render those types; they
+    # report that rather than half-working.
+
+
+def url_for(
+    source: FileSource,
+    path: str,
+    params: t.Mapping[str, str] | None = None,
+) -> str | None:
+    """A browser-fetchable URL for ``path``, if this source offers one."""
+    builder = getattr(source, "url_for", None)
+    if builder is None:
+        return None
+    return builder(path, params)
 
 
 class LocalFileSource:
@@ -51,6 +75,23 @@ class LocalFileSource:
 
     def exists(self, path: str) -> bool:
         return self._full(path).exists()
+
+    def url_for(
+        self, path: str, params: t.Mapping[str, str] | None = None
+    ) -> str:
+        """The URL the dev server serves this file at.
+
+        Root-relative, matching the server's static route, so the two
+        agree by construction. Each segment is quoted separately to keep
+        the slashes - and because real datasheet filenames are full of
+        ``+`` and spaces.
+        """
+        url = "/" + "/".join(
+            urllib.parse.quote(part) for part in path.split("/") if part
+        )
+        if params:
+            url += "?" + urllib.parse.urlencode(dict(params))
+        return url
 
     def __repr__(self) -> str:
         return f"LocalFileSource({str(self.root)!r})"

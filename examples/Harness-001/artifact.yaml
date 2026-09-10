@@ -17,3 +17,13 @@ sections:
   - type: markdown
     path: ../datasheets/molex-kk-254.md
     description: Connector datasheet extract (shared, not a copy).
+
+  # The same shared PDF that Compliance-CDS shows, trimmed to a different
+  # page. One file on disk, cited by two artifacts, each showing the part
+  # that concerns it.
+  - type: pdf
+    path: ../datasheets/CDS+REV14_1+2022-02-09-1.pdf
+    description: The electrical requirement this harness is built to (CDS Rev 14.1, §2.3).
+    options:
+      pages: "14"
+      height: 640

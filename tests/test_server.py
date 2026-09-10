@@ -83,6 +83,24 @@ def test_a_folder_without_a_manifest_is_not_a_page(tmp_path):
     assert at(tmp_path, "/nope/") is None
 
 
+def test_the_root_of_a_repository_lists_rather_than_404s(tmp_path):
+    """`mav serve` with no folder is the most natural way to run it."""
+    make_artifact(tmp_path / "a" / "Harness-001", name="Harness-001")
+
+    # The root itself has no manifest, so it is a listing, not a page.
+    assert at(tmp_path, "/") is None
+    assert server.find_artifacts(tmp_path) == [tmp_path / "a" / "Harness-001"]
+
+
+def test_an_intermediate_directory_lists_what_is_under_it(tmp_path):
+    make_artifact(tmp_path / "a" / "Harness-001")
+    make_artifact(tmp_path / "b" / "Connector-001")
+
+    assert server.find_artifacts(tmp_path / "a") == [
+        tmp_path / "a" / "Harness-001"
+    ]
+
+
 def test_dot_segments_cannot_walk_out_of_the_root(tmp_path):
     make_artifact(tmp_path / "inside")
     assert at(tmp_path, "/../../inside/") == tmp_path / "inside"
@@ -100,6 +118,24 @@ def test_find_artifacts_lists_them_and_skips_the_noise(tmp_path):
         tmp_path / "Harness-001",
         tmp_path / "nested" / "Connector-001",
     ]
+
+
+def test_opening_a_browser_reports_whether_it_worked(monkeypatch):
+    monkeypatch.setattr(server.webbrowser, "open", lambda url: True)
+    assert server.open_in_browser("http://127.0.0.1:8000/") is True
+
+    monkeypatch.setattr(server.webbrowser, "open", lambda url: False)
+    assert server.open_in_browser("http://127.0.0.1:8000/") is False
+
+
+def test_a_machine_with_no_browser_is_not_an_error(monkeypatch):
+    """Headless boxes and SSH sessions are normal places to run this."""
+
+    def explode(url):
+        raise OSError("no browser here")
+
+    monkeypatch.setattr(server.webbrowser, "open", explode)
+    assert server.open_in_browser("http://127.0.0.1:8000/") is False
 
 
 def test_fingerprint_changes_when_content_changes(tmp_path):

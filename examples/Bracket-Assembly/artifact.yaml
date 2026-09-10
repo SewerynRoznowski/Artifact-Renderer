@@ -21,8 +21,9 @@ sections:
     options:
       depth: 3
 
-  # Placeholder: a Phase 2 type, not implemented yet. The manifest is
-  # valid - it is the renderer that hasn't caught up.
+  # Placeholder: 'pdf' is implemented, but this file isn't here. The
+  # section names the file it wanted, so the gap is visible rather than
+  # silently absent.
   - type: pdf
     path: torque-spec.pdf
     description: Fastener torque schedule.

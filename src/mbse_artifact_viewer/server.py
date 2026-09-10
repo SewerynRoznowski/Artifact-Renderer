@@ -36,7 +36,9 @@ import pathlib
 import socketserver
 import typing as t
 import urllib.parse
+import webbrowser
 
+from . import pdfpages
 from .manifest import MANIFEST_NAME
 from .render import STYLESHEET, render_folder
 
@@ -137,25 +139,31 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             self._send(fingerprint(watched).encode(), "text/plain")
             return
 
-        if path in {"/", "/index.html"} and self.page_path != "/":
-            self._send(self._index().encode("utf-8"), _HTML)
-            return
+        if path == "/index.html":
+            path = "/"
 
-        # Any folder under the root holding an artifact.yaml is a page,
-        # not just the one the server was started with. Otherwise a link
-        # from the index, or an edited URL, would fall through to the
-        # static-file branch and 404 on a directory.
-        folder = self._artifact_at(path)
-        if folder is not None:
+        # Every directory answers, one way or the other: one holding an
+        # artifact.yaml renders as a page, any other lists the artifacts
+        # beneath it. Only the folder the server was launched with used to
+        # be a page, which left `mav serve` at the root of a repository -
+        # the most natural way to run it - falling through to the
+        # static-file branch and 404ing on its own front page.
+        folder = self.root.joinpath(*_segments(path))
+        if folder.is_dir():
             if not path.endswith("/"):
                 # Without the trailing slash the browser resolves every
                 # relative link one level too high.
                 self._redirect(path + "/")
                 return
-            self._send(self._page(folder).encode("utf-8"), _HTML)
+            body = (
+                self._page(folder)
+                if (folder / MANIFEST_NAME).is_file()
+                else self._index(folder)
+            )
+            self._send(body.encode("utf-8"), _HTML)
             return
 
-        self._send_file(path)
+        self._send_file(path, parsed.query)
 
     def _artifact_at(self, url_path: str) -> pathlib.Path | None:
         """The artifact folder ``url_path`` names, if it is one."""
@@ -169,7 +177,9 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         for diagnostic in result.diagnostics:
             self.log_message("%s", diagnostic)
         document = result.document()
-        if self.page_path != "/":
+        if not (self.root / MANIFEST_NAME).is_file():
+            # There is an index to go back to unless the root is itself a
+            # single artifact folder.
             document = document.replace(
                 '<article class="mav">',
                 '<article class="mav">\n<p class="mav-caption">'
@@ -180,10 +190,11 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             document = document.replace("</body>", f"{_RELOAD_SCRIPT}</body>")
         return document
 
-    def _index(self) -> str:
-        """Every artifact folder under the root, in one list."""
+    def _index(self, under: pathlib.Path | None = None) -> str:
+        """The artifacts beneath ``under`` (the root by default)."""
+        under = under or self.root
         rows = []
-        for folder in find_artifacts(self.root):
+        for folder in find_artifacts(under):
             url = page_url(folder, self.root)
             result = render_folder(folder, self.root)
             name = result.manifest.name if result.manifest else folder.name
@@ -207,8 +218,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         body = (
             "<ul>\n" + "\n".join(rows) + "\n</ul>"
             if rows
-            else '<p class="mav-caption">No artifact.yaml found under the '
-            "root.</p>"
+            else '<p class="mav-caption">No artifact.yaml found under '
+            f"this directory.</p>"
         )
         return (
             "<!doctype html>\n<html lang=\"en\">\n<head>\n"
@@ -222,7 +233,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             f"{STYLESHEET}</style>\n</head>\n<body>\n"
             '<article class="mav">\n<header class="mav-head">\n'
             f"<h1>Artifacts</h1>\n<p class=\"mav-lede\">"
-            f"{html.escape(str(self.root))}</p>\n</header>\n"
+            f"{html.escape(str(under))}</p>\n</header>\n"
             f"{body}\n</article>\n</body>\n</html>\n"
         )
 
@@ -231,20 +242,45 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Location", location)
         self.end_headers()
 
-    def _send_file(self, path: str) -> None:
+    def _send_file(self, path: str, query: str = "") -> None:
         relative = _segments(path)
         if not relative:
             self.send_error(404)
             return
 
         candidate = self.root.joinpath(*relative)
-        if candidate.is_file():
-            kind, _ = mimetypes.guess_type(candidate.name)
-            self._send(
-                candidate.read_bytes(), kind or "application/octet-stream"
-            )
+        if not candidate.is_file():
+            self.send_error(404, f"No such file: {path}")
             return
-        self.send_error(404, f"No such file: {path}")
+
+        body = candidate.read_bytes()
+        kind, _ = mimetypes.guess_type(candidate.name)
+        pages = urllib.parse.parse_qs(query).get("pages", [None])[0]
+        if pages and candidate.suffix.lower() == ".pdf":
+            body = self._trim_pdf(body, pages, candidate.name)
+        self._send(body, kind or "application/octet-stream")
+
+    def _trim_pdf(self, body: bytes, spec: str, name: str) -> bytes:
+        """Serve only the requested pages.
+
+        The extraction belongs here rather than in the renderer because a
+        browser will not open a PDF given to it as a ``data:`` URI - it
+        needs a URL, so whatever answers that URL is what has to do the
+        cutting. Failing over to the whole document keeps a page-selection
+        problem from turning into a blank frame.
+        """
+        try:
+            return pdfpages.extract(body, pdfpages.parse_selection(spec))
+        except pdfpages.PdfUnavailable as err:
+            self.log_message("%s: serving %s in full", err, name)
+        except Exception as err:
+            self.log_message(
+                "could not take pages %s of %s (%s); serving it in full",
+                spec,
+                name,
+                err,
+            )
+        return body
 
     def _send(self, body: bytes, content_type: str) -> None:
         self.send_response(200)
@@ -280,12 +316,27 @@ DEFAULT_PORT = 8000
 _PORT_ATTEMPTS = 20
 
 
+def open_in_browser(url: str) -> bool:
+    """Open ``url`` in the default browser. Never fails the server.
+
+    A machine with no browser configured - a headless box, a container,
+    an SSH session - is a perfectly good place to run this and read the
+    URL yourself, so not opening anything is a normal outcome rather than
+    an error.
+    """
+    try:
+        return webbrowser.open(url)
+    except Exception:
+        return False
+
+
 def serve(
     folder: pathlib.Path,
     root: pathlib.Path | None = None,
     host: str = "127.0.0.1",
     port: int | None = None,
     live_reload: bool = True,
+    open_browser: bool = True,
 ) -> None:
     """Serve ``folder`` until interrupted.
 
@@ -312,6 +363,7 @@ def serve(
     httpd, bound = _bind(host, port, handler)
     with httpd:
         others = len(find_artifacts(root)) - 1
+        url = f"http://{host}:{bound}{page_path}"
         print(f"  serving {folder}")
         print(f"  root    {root}")
         if page_path != "/" and others > 0:
@@ -321,10 +373,14 @@ def serve(
             )
         # flush: stdout block-buffers when piped, and the URL is the
         # one line the user is waiting on.
-        print(
-            f"  http://{host}:{bound}{page_path}  (ctrl-c to stop)",
-            flush=True,
-        )
+        print(f"  {url}  (ctrl-c to stop)", flush=True)
+
+        # The socket is already listening by now - server_activate() runs
+        # in the constructor - so a browser that gets there first waits in
+        # the backlog rather than being refused.
+        if open_browser and not open_in_browser(url):
+            print("  (could not open a browser; the URL above is it)")
+
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

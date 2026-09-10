@@ -61,7 +61,7 @@ def test_a_missing_file_is_visible_and_the_rest_still_renders(tmp_path):
 def test_a_planned_type_says_so_rather_than_claiming_to_be_unknown(tmp_path):
     result = build(
         tmp_path,
-        "name: x\nsections:\n  - {type: pdf, path: a.pdf}\n",
+        "name: x\nsections:\n  - {type: 3dmodel, path: a.glb}\n",
     )
     assert "not implemented yet" in result.html
     assert "Phase 2" in result.diagnostics[0].message
@@ -227,4 +227,5 @@ class TestExamples:
         assert len(errors) == 4
         assert any("assembly-notes.md" in m for m in errors)
         assert any("'step'" in m for m in errors)
-        assert sum(1 for m in errors if "not implemented yet" in m) == 2
+        assert sum(1 for m in errors if "not implemented yet" in m) == 1
+        assert any("torque-spec.pdf" in m for m in errors)

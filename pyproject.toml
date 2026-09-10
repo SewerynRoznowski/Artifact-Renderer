@@ -26,6 +26,10 @@ dependencies = [
 # PDFs and 3D models has no use for. Missing it degrades to a placeholder
 # on wireviz sections only - it never stops the rest of a page rendering.
 wireviz = ["wireviz>=0.4.1"]
+# pypdf is only needed to show a page *selection* from a PDF; a whole
+# document is served as-is and needs nothing.
+pdf = ["pypdf>=4.0"]
+all = ["wireviz>=0.4.1", "pypdf>=4.0"]
 
 [project.scripts]
 mav = "mbse_artifact_viewer.cli:main"

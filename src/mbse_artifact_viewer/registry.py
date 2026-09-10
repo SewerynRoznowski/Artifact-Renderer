@@ -91,7 +91,6 @@ REGISTRY: dict[str, Renderer] = {}
 #: Named in the spec, not implemented yet. Phase 2, once there is a
 #: file-serving route to hang them on.
 PLANNED: dict[str, str] = {
-    "pdf": "needs the Phase 2 file-serving route",
     "3dmodel": "needs the Phase 2 file-serving route",
     "jupyter": "needs Phase 2 nbformat parsing",
 }

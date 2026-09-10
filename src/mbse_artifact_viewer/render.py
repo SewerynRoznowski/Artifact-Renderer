@@ -46,6 +46,8 @@ STYLESHEET = """
   padding: .3rem .55rem; text-align: left; }
 .mav-body pre { background: color-mix(in srgb, var(--mav-fg) 6%, transparent);
   overflow-x: auto; padding: .7rem .9rem; }
+.mav-pdf { width: 100%; border: 1px solid var(--mav-line);
+  background: var(--mav-bg); display: block; }
 .mav-problem { background: var(--mav-warn-bg);
   border-left: 3px solid var(--mav-warn-line); padding: .8rem 1rem; }
 .mav-problem p { margin: 0 0 .3rem; }
