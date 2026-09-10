@@ -106,18 +106,30 @@ def test_dot_segments_cannot_walk_out_of_the_root(tmp_path):
     assert at(tmp_path, "/../../inside/") == tmp_path / "inside"
 
 
+def test_a_dot_directory_is_ordinary_content(tmp_path):
+    """capella-cubed writes its generated report into .build/. Dropping
+    every dot-segment silently rewrote such a path to a different file."""
+    assert server._segments("/a/.build/report.html") == [
+        "a",
+        ".build",
+        "report.html",
+    ]
+
+
 def test_find_artifacts_lists_them_and_skips_the_noise(tmp_path):
     make_artifact(tmp_path / "Harness-001")
     make_artifact(tmp_path / "nested" / "Connector-001")
     make_artifact(tmp_path / ".git" / "Ignored")
     make_artifact(tmp_path / "node_modules" / "Ignored")
+    make_artifact(tmp_path / ".build" / "Generated")
 
     found = server.find_artifacts(tmp_path)
 
     assert found == [
+        tmp_path / ".build" / "Generated",
         tmp_path / "Harness-001",
         tmp_path / "nested" / "Connector-001",
-    ]
+    ], "a listing skips .git and node_modules, not every dot-directory"
 
 
 def test_opening_a_browser_reports_whether_it_worked(monkeypatch):

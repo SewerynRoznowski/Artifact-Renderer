@@ -1,0 +1,44 @@
+name: ANA-001
+description: Payload power and duty-cycle allocation — assumptions, scores, and the guarantee that came out.
+doc: about.md
+
+sections:
+  # capella-cubed's own generated report, first because it is the
+  # deliverable: status, freshness, the git commit the run came from, the
+  # traceability score, and the assumption and guarantee tables. It is a
+  # complete HTML document with its own light/dark stylesheet, so it gets
+  # a frame of its own rather than having that stylesheet stripped.
+  #
+  # It lives in .build/ because it is generated. Nothing special is
+  # needed to point at a dot-directory - it is an ordinary folder.
+  - type: html
+    path: .build/report.html
+    description: The generated report — status FAIL, traceability 50%.
+    options:
+      height: 720
+
+  # The notebook's results: prose and outputs, no code. That is the
+  # default because an analysis notebook is a working document, and a
+  # reviewer wants the diagram, the table and the number - not the
+  # imports and the scratch variables.
+  - type: jupyter
+    path: notebook.ipynb
+    description: The analysis as a reviewer reads it.
+
+  # The same notebook, narrowed to the cells that do the arithmetic, with
+  # the code shown. This is the "how did you get that number" view.
+  - type: jupyter
+    path: notebook.ipynb
+    description: How the guarantee was computed, code included.
+    options:
+      cells: "6-9"
+      include_source: true
+
+  # nbconvert's own export of the same notebook: a complete HTML document
+  # whose <head> is 276 KB of stylesheet. It gets a frame of its own, so
+  # that stylesheet applies to itself and not to this page.
+  - type: html
+    path: notebook.html
+    description: nbconvert's export, styled as Jupyter renders it.
+    options:
+      height: 640

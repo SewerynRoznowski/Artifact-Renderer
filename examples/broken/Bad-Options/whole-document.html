@@ -4,14 +4,18 @@
 <meta charset="utf-8">
 <title>A complete document, not a fragment</title>
 <style>
-  /* This lives in <head>. It is dropped rather than embedded - one
-     section must not be able to restyle the whole page. */
-  body { background: #c00 !important; color: #fff; }
+  /* A complete document gets a frame of its own, so this stylesheet
+     applies to this document and cannot reach the page around it. That
+     isolation is why the <head> no longer has to be thrown away: an
+     nbconvert export is mostly <head>, and dropping it renders something
+     that looks broken. */
+  body { background: #7a1020; color: #fff; font: 15px/1.5 system-ui; }
+  p { margin: 1.5rem; }
 </style>
 </head>
 <body>
-<p>This paragraph is the whole <code>&lt;body&gt;</code>, and it is what
-gets embedded. If the stylesheet above had come with it, this page would
-now be red.</p>
+<p>This document sets its own dark red background. You can see it inside
+this frame and nowhere else — if the stylesheet had been inlined into the
+page instead, everything around it would be red too.</p>
 </body>
 </html>

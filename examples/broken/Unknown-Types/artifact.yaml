@@ -1,17 +1,17 @@
 # BROKEN ON PURPOSE. Not an example to copy.
 #
-# Two different situations that would look identical if the renderer
-# didn't distinguish them:
+# A section type nobody implements. The message lists the types that do
+# exist, because the usual cause is a typo and the usual fix is reading
+# the list.
 #
-#   - a type nobody has ever implemented, which is a typo or a mistake;
-#   - a type this project has named but not built yet, where the manifest
-#     is right and the renderer is the one that hasn't caught up.
-#
-# Telling an engineer "unknown type" about a type that is simply pending
-# would send them looking for a spelling mistake that isn't there.
+# The renderer also distinguishes a *pending* type - one this project has
+# named but not built - from an unknown one, since telling an engineer
+# "unknown type" about something merely unbuilt sends them hunting for a
+# spelling mistake that isn't there. There is no example of that here
+# because every type the spec names is now built.
 
-name: "Broken: unknown and unbuilt types"
-description: A type that doesn't exist, and one that isn't built yet.
+name: "Broken: unknown types"
+description: Section types that no renderer knows.
 
 sections:
   - type: step
@@ -21,7 +21,3 @@ sections:
   - type: mardown
     path: notes.md
     description: A plain typo, and the message lists the types that exist.
-
-  - type: jupyter
-    path: analysis.ipynb
-    description: Named in the spec, not implemented yet.

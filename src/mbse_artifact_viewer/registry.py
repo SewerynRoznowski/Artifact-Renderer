@@ -105,11 +105,10 @@ class Renderer:
 
 REGISTRY: dict[str, Renderer] = {}
 
-#: Named in the spec, not implemented yet. Phase 2, once there is a
-#: file-serving route to hang them on.
-PLANNED: dict[str, str] = {
-    "jupyter": "needs Phase 2 nbformat parsing",
-}
+#: Named in the spec but not implemented. Empty now that every type in
+#: the spec is built - kept because the distinction it draws still
+#: matters: a type that is *pending* should not be reported as a typo.
+PLANNED: dict[str, str] = {}
 
 
 def renderer(

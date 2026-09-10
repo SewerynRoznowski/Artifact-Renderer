@@ -5,6 +5,6 @@ Adding a type means adding a module here and one line below - the page
 template never learns about it.
 """
 
-from . import html_, markdown_, model3d, pdf_, wireviz_
+from . import html_, jupyter_, markdown_, model3d, pdf_, wireviz_
 
-__all__ = ["html_", "markdown_", "model3d", "pdf_", "wireviz_"]
+__all__ = ["html_", "jupyter_", "markdown_", "model3d", "pdf_", "wireviz_"]

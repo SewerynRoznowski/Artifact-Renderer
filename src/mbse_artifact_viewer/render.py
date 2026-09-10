@@ -52,6 +52,19 @@ STYLESHEET = """
   background: color-mix(in srgb, var(--mav-fg) 4%, transparent);
   overflow: hidden; touch-action: none; }
 .mav-3d canvas { display: block; }
+.mav-embed { width: 100%; border: 1px solid var(--mav-line);
+  background: #fff; display: block; }
+.mav-nb-out { margin: .6rem 0; overflow-x: auto; }
+.mav-nb-out img, .mav-nb-out svg { max-width: 100%; height: auto; }
+.mav-nb-out table { border-collapse: collapse; font-size: .92rem; }
+.mav-nb-out th, .mav-nb-out td { border: 1px solid var(--mav-line);
+  padding: .25rem .5rem; text-align: left; }
+.mav-nb-source, .mav-nb-text, .mav-nb-err { font-size: .88rem;
+  overflow-x: auto; padding: .6rem .8rem; margin: .5rem 0;
+  background: color-mix(in srgb, var(--mav-fg) 6%, transparent); }
+.mav-nb-source { border-left: 3px solid var(--mav-line); }
+.mav-nb-err { background: var(--mav-warn-bg);
+  border-left: 3px solid var(--mav-warn-line); }
 .mav-problem { background: var(--mav-warn-bg);
   border-left: 3px solid var(--mav-warn-line); padding: .8rem 1rem; }
 .mav-problem p { margin: 0 0 .3rem; }

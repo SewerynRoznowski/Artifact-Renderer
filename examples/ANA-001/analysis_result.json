@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "analysis": {
+    "id": "ANA-001",
+    "uuid": "d589dadd-e013-43a8-aeb4-bbeb07847958",
+    "name": "ANA-001",
+    "description": "",
+    "folder": "analysis/ANA-001",
+    "notebook": "analysis/ANA-001/notebook.ipynb"
+  },
+  "status": "FAIL",
+  "summary": "wawawiwi",
+  "generated_at": "2026-09-03T20:52:37.095893+00:00",
+  "provenance": {
+    "model_entrypoint": "architecture/Munin-2.aird",
+    "model_hash": "sha256:75ce6cbffddf027527f3349163fc31843ee305ecef12050007224cef4c132400",
+    "inputs_hash": "sha256:fb5094f86afabdfb6154b6b16a8b53f188218ed605680f65c0882df6570fd21e",
+    "notebook_hash": "sha256:d67fbdd477aa137bd29a26feabb8020aa7a7c0a843061bedbadfcbd9b4c19dec",
+    "git": {
+      "commit": "516b3dc776ad22c737ce8b30193118173f1089f8",
+      "branch": "main",
+      "dirty": true
+    },
+    "versions": {
+      "capella_cubed": "0.1.0",
+      "capellambse": "0.8.1",
+      "capellambse_context_diagrams": "0.8.7.dev6+g89b2a556d",
+      "python": "3.13.9"
+    }
+  },
+  "score": {
+    "n_assumptions": 2,
+    "n_explicit": 1,
+    "n_implicit": 1,
+    "traceability": 0.5,
+    "n_deprecated": 0,
+    "n_verified": 0,
+    "n_unverified": 1,
+    "state_distribution": {
+      "Draft": 0.5,
+      "IMPLICIT": 0.5
+    }
+  },
+  "metrics": {},
+  "assumptions": [
+    {
+      "name": "REQ-SYS-001",
+      "alias": "",
+      "uuid": "8507461d-675b-40c2-b17c-0521dca2e32c",
+      "kind": "EXPLICIT",
+      "consumed": true,
+      "element_class": "Requirement",
+      "text": "The system shall have 60 dabloons",
+      "text_plain": "The system shall have 60 dabloons",
+      "value": 60.0,
+      "raw_value": "60",
+      "unit": "count",
+      "state": "Draft",
+      "owner": "",
+      "req_type": "Mission",
+      "verification": "Analysis",
+      "expression": "==",
+      "permission": "",
+      "rationale": "nan",
+      "deprecated": false,
+      "relation_uuid": "a4d2aa66-6021-4df6-b5c6-bc0591b55d1e"
+    },
+    {
+      "name": "num_monkeys",
+      "alias": "",
+      "uuid": null,
+      "kind": "IMPLICIT",
+      "consumed": true,
+      "element_class": "",
+      "text": "",
+      "text_plain": "",
+      "value": 5,
+      "raw_value": "5",
+      "unit": "count",
+      "state": "IMPLICIT",
+      "owner": "",
+      "req_type": "",
+      "verification": "",
+      "expression": "",
+      "permission": "",
+      "rationale": "Since we need so many dabloons, we surely will need this many monkeys",
+      "deprecated": false,
+      "relation_uuid": null
+    }
+  ],
+  "guarantees": [
+    {
+      "target_kind": "requirement",
+      "target_name": "REQ-SYS-002",
+      "target_uuid": "a585205a-a476-42ee-8aa2-c1e8d0a93b98",
+      "relation_uuid": "0ac7d664-e240-42f2-b77a-f864f779fbbd",
+      "attribute": "Numerical Attribute",
+      "unit": "count",
+      "current_value": "0",
+      "proposed_value": "300",
+      "current_text": "",
+      "proposed_text": "",
+      "changed": true
+    },
+    {
+      "target_kind": "requirement",
+      "target_name": "REQ-SYS-003",
+      "target_uuid": "0dad988d-7fc4-478f-8771-51e255044d8d",
+      "relation_uuid": "a1cee09b-1e08-4e5f-b58a-6ea36f915024",
+      "attribute": "Numerical Attribute",
+      "unit": "count",
+      "current_value": "0",
+      "proposed_value": null,
+      "current_text": "",
+      "proposed_text": null,
+      "changed": false
+    }
+  ],
+  "checks": [
+    {
+      "name": "REQ-SYS-002",
+      "passed": false,
+      "severity": "error",
+      "source": "manual",
+      "requirement_uuid": null,
+      "expression": "",
+      "permission": "",
+      "message": "",
+      "expected": null,
+      "actual": null
+    }
+  ],
+  "warnings": [
+    "REQ-SYS-003 is a guarantee target of ANA-001 but no value was proposed for it.",
+    "REQ-SYS-001 carries an Expression but was never passed to verify()."
+  ],
+  "errors": []
+}

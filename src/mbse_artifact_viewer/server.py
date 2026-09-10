@@ -45,10 +45,11 @@ from .render import STYLESHEET, render_folder
 RELOAD_PATH = "/__mav/fingerprint"
 _HTML = "text/html; charset=utf-8"
 
-#: Directories never walked when listing artifacts. Dot-directories are
-#: skipped wholesale (``.git``, ``.venv``); these two are the common
-#: non-dot offenders, and walking them is slow enough to be noticed.
-_SKIP_DIRS = frozenset({"node_modules", "__pycache__"})
+#: Directories never walked when *listing* artifacts - a listing is a
+#: menu, and these hold no artifact anyone chose to publish. Serving is a
+#: separate decision: a file inside one of these is still served if a
+#: manifest asks for it by name.
+_SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__"})
 
 _RELOAD_SCRIPT = f"""
 <script>
@@ -79,17 +80,24 @@ def page_url(folder: pathlib.Path, root: pathlib.Path) -> str:
     return "/" if relative == "." else f"/{relative}/"
 
 
-def _segments(url_path: str) -> list[str]:
-    """URL path to path segments, dropping dot segments.
+#: Refused by name rather than by leading dot. A dot-directory is
+#: ordinary content - capella-cubed writes its generated report into
+#: ``.build/`` - and dropping every one of them silently rewrote such a
+#: path into a different file. This is the one that is never content.
+_NEVER_SERVED = frozenset({".git"})
 
-    ``..`` is dropped rather than resolved - it has nothing to mean here -
-    and skipping dot-directories keeps the dev server from cheerfully
-    handing out the ``.git`` of whatever checkout it was pointed at.
+
+def _segments(url_path: str) -> list[str]:
+    """URL path to path segments.
+
+    ``.`` and ``..`` are dropped rather than resolved: neither has
+    anything to mean in a URL here, and dropping them means a path cannot
+    climb out of the root by asking.
     """
     return [
         part
         for part in url_path.strip("/").split("/")
-        if part and not part.startswith(".")
+        if part and part not in (".", "..")
     ]
 
 
@@ -98,7 +106,7 @@ def find_artifacts(root: pathlib.Path) -> list[pathlib.Path]:
     found: list[pathlib.Path] = []
     for manifest in root.rglob(MANIFEST_NAME):
         relative = manifest.relative_to(root).parts
-        if any(p.startswith(".") or p in _SKIP_DIRS for p in relative):
+        if any(part in _SKIP_DIRS for part in relative):
             continue
         found.append(manifest.parent)
     return sorted(found)
@@ -148,8 +156,9 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         # be a page, which left `mav serve` at the root of a repository -
         # the most natural way to run it - falling through to the
         # static-file branch and 404ing on its own front page.
-        folder = self.root.joinpath(*_segments(path))
-        if folder.is_dir():
+        segments = _segments(path)
+        folder = self.root.joinpath(*segments)
+        if folder.is_dir() and not (_NEVER_SERVED & set(segments)):
             if not path.endswith("/"):
                 # Without the trailing slash the browser resolves every
                 # relative link one level too high.
@@ -246,6 +255,9 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         relative = _segments(path)
         if not relative:
             self.send_error(404)
+            return
+        if _NEVER_SERVED & set(relative):
+            self.send_error(404, f"No such file: {path}")
             return
 
         candidate = self.root.joinpath(*relative)

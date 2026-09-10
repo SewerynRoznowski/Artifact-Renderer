@@ -5,7 +5,7 @@ import pathlib
 
 import pytest
 
-from mbse_artifact_viewer import render_artifact, render_folder
+from mbse_artifact_viewer import registry, render_artifact, render_folder
 from mbse_artifact_viewer.errors import Level
 from mbse_artifact_viewer.sources import LocalFileSource
 
@@ -58,13 +58,23 @@ def test_a_missing_file_is_visible_and_the_rest_still_renders(tmp_path):
     assert [d.level for d in result.diagnostics] == [Level.ERROR]
 
 
-def test_a_planned_type_says_so_rather_than_claiming_to_be_unknown(tmp_path):
+def test_a_planned_type_says_so_rather_than_claiming_to_be_unknown(
+    tmp_path, monkeypatch
+):
+    """Every type the spec names is built today, so this pins the rule.
+
+    A pending type reported as "unknown" sends an engineer hunting for a
+    spelling mistake that isn't there.
+    """
+    monkeypatch.setitem(registry.PLANNED, "hologram", "needs a holodeck")
+
     result = build(
         tmp_path,
-        "name: x\nsections:\n  - {type: jupyter, path: a.ipynb}\n",
+        "name: x\nsections:\n  - {type: hologram, path: a.holo}\n",
     )
     assert "not implemented yet" in result.html
-    assert "Phase 2" in result.diagnostics[0].message
+    assert "needs a holodeck" in result.diagnostics[0].message
+    assert "unknown" not in result.diagnostics[0].message
 
 
 def test_an_unknown_type_lists_what_is_known(tmp_path):
@@ -133,7 +143,9 @@ def test_a_missing_doc_file_does_not_cost_the_sections(tmp_path):
     assert "gone.md" in result.html
 
 
-def test_html_documents_are_embedded_by_their_body(tmp_path):
+def test_a_complete_html_document_gets_a_frame_of_its_own(tmp_path):
+    """Its <head> is usually what makes it legible — an nbconvert export
+    is 276 KB of stylesheet — so isolate it rather than discard it."""
     result = build(
         tmp_path,
         "name: x\nsections:\n  - {type: html, path: page.html}\n",
@@ -142,9 +154,41 @@ def test_html_documents_are_embedded_by_their_body(tmp_path):
             "</head><body><p>kept</p></body></html>"
         ),
     )
-    assert "kept" in result.html
-    assert "color:red" not in result.html, "head styles must not leak out"
-    assert "<html" not in result.html
+    assert result.ok
+    assert "<iframe" in result.html
+    assert 'src="/page.html"' in result.html, "fetched, not inlined"
+    assert "<p>kept</p>" not in result.html, "inside the frame, not loose"
+    assert "color:red" not in result.html, "its styles cannot reach the page"
+
+
+def test_a_document_is_carried_inline_when_there_is_no_serving_route(
+    tmp_path,
+):
+    """A consumer without url_for still gets the document, via srcdoc."""
+
+    class NoUrls:
+        def __init__(self, inner):
+            self._inner = inner
+
+        def read_bytes(self, path):
+            return self._inner.read_bytes(path)
+
+        def exists(self, path):
+            return self._inner.exists(path)
+
+    (tmp_path / "page.html").write_text(
+        "<!doctype html><html><body><p>kept</p></body></html>",
+        encoding="utf-8",
+    )
+    (tmp_path / "artifact.yaml").write_text(
+        "name: x\nsections:\n  - {type: html, path: page.html}\n",
+        encoding="utf-8",
+    )
+
+    result = render_artifact(NoUrls(LocalFileSource(tmp_path)), "")
+
+    assert "srcdoc=" in result.html
+    assert "&lt;p&gt;kept&lt;/p&gt;" in result.html, "escaped into the attr"
 
 
 def test_html_fragments_are_embedded_as_they_are(tmp_path):
@@ -221,7 +265,13 @@ class TestExamples:
 
     @pytest.mark.parametrize(
         "name",
-        ["Harness-001", "Connector-001", "Compliance-CDS", "Bracket-Assembly"],
+        [
+            "Harness-001",
+            "Connector-001",
+            "Compliance-CDS",
+            "Bracket-Assembly",
+            "ANA-001",
+        ],
     )
     def test_the_working_examples_are_actually_clean(self, name):
         """Not one warning between them - they are what to copy."""
@@ -259,13 +309,13 @@ class TestBrokenExamples:
             assert any(missing in m for m in errors)
             assert missing in result.html, "visible, not merely absent"
 
-    def test_an_unbuilt_type_reads_differently_from_a_typo(self):
+    def test_an_unknown_type_names_the_ones_that_exist(self):
         result = self._render("Unknown-Types")
         messages = " ".join(d.message for d in result.errors)
 
         assert "unknown section type 'mardown'" in messages
         assert "unknown section type 'step'" in messages
-        assert "'jupyter' is not implemented yet" in messages
+        assert "markdown" in messages, "the list is the fix for a typo"
 
     def test_bad_options_warn_where_they_can_and_fail_where_they_cannot(self):
         result = self._render("Bad-Options")

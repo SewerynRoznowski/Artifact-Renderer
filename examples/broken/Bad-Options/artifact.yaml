@@ -24,12 +24,14 @@ sections:
     options:
       depth: 3
 
-  # Warning. A complete HTML document rather than a fragment: the <body>
-  # is lifted out and anything in its <head> is dropped, which is said
-  # out loud because a dropped <style> would otherwise be a mystery.
+  # Warning. A height nobody meant: clamped to the default rather than
+  # producing a frame taller than any screen. (The file itself is a
+  # complete HTML document, which is fine - it gets a frame of its own.)
   - type: html
     path: whole-document.html
-    description: A complete HTML document, not a fragment (warning - body is lifted out).
+    description: A height out of range (warning - the default is used).
+    options:
+      height: 99999
 
   # Warning. Not a direction, so the default is used and the model is
   # still shown.
