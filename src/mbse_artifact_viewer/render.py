@@ -48,6 +48,10 @@ STYLESHEET = """
   overflow-x: auto; padding: .7rem .9rem; }
 .mav-pdf { width: 100%; border: 1px solid var(--mav-line);
   background: var(--mav-bg); display: block; }
+.mav-3d { width: 100%; border: 1px solid var(--mav-line);
+  background: color-mix(in srgb, var(--mav-fg) 4%, transparent);
+  overflow: hidden; touch-action: none; }
+.mav-3d canvas { display: block; }
 .mav-problem { background: var(--mav-warn-bg);
   border-left: 3px solid var(--mav-warn-line); padding: .8rem 1rem; }
 .mav-problem p { margin: 0 0 .3rem; }
@@ -65,6 +69,10 @@ class RenderResult:
     html: str
     diagnostics: list[Diagnostic]
     manifest: manifest_mod.Manifest | None = None
+    #: Markup some section types need once per page - a viewer library,
+    #: an import map. A consumer embedding :attr:`html` must emit this
+    #: too, above the fragment; :meth:`document` does it for you.
+    head: str = ""
 
     @property
     def errors(self) -> list[Diagnostic]:
@@ -85,8 +93,8 @@ class RenderResult:
             'initial-scale=1">\n'
             f"<title>{html.escape(name)}</title>\n"
             "<style>\nbody { margin: 0; padding: 2rem 1.5rem; }\n"
-            f"{STYLESHEET}</style>\n</head>\n<body>\n{self.html}\n"
-            "</body>\n</html>\n"
+            f"{STYLESHEET}</style>\n{self.head}\n</head>\n<body>\n"
+            f"{self.html}\n</body>\n</html>\n"
         )
 
 
@@ -108,15 +116,23 @@ def render_artifact(source: FileSource, folder: str = "") -> RenderResult:
         "<article class=\"mav\">",
         _head(parsed),
     ]
+    head_assets: dict[str, str] = {}
     if parsed.doc:
         parts.append(
             _doc_block(source, parsed, parsed.doc, section=None)
         )
     for section in parsed.sections:
-        parts.append(_render_section(source, parsed, section, diagnostics))
+        parts.append(
+            _render_section(source, parsed, section, diagnostics, head_assets)
+        )
     parts.append("</article>")
 
-    return RenderResult("\n".join(p for p in parts if p), diagnostics, parsed)
+    return RenderResult(
+        "\n".join(p for p in parts if p),
+        diagnostics,
+        parsed,
+        "\n".join(head_assets.values()),
+    )
 
 
 def render_folder(
@@ -158,6 +174,7 @@ def _render_section(
     parsed: manifest_mod.Manifest,
     section: manifest_mod.Section,
     diagnostics: list[Diagnostic],
+    head_assets: dict[str, str],
 ) -> str:
     attr = f' data-type="{html.escape(section.type)}"' if section.type else ""
 
@@ -179,7 +196,9 @@ def _render_section(
         diagnostics.append(_error(parsed, section, message))
         return _problem(section, message, attr)
 
-    ctx = registry.RenderContext(source, parsed, section, diagnostics)
+    ctx = registry.RenderContext(
+        source, parsed, section, diagnostics, head_assets
+    )
     registry.check_options(ctx, spec)
 
     head = ""

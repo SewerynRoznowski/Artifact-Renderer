@@ -30,6 +30,10 @@ sections:
     options:
       pages: "1-3"
 
+  # Renders. The .glb was exported in metres but still Z-up, the way a
+  # CAD export usually lands, so `up: z` stands it upright. `camera` is
+  # the direction to look from - the distance is fitted to the model, so
+  # the same vector works whatever size the part is.
   - type: 3dmodel
     path: bracket-v2.glb
     description: As-built revision, superseding the v1 bracket.

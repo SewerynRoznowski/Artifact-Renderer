@@ -35,6 +35,9 @@ class RenderContext:
     manifest: Manifest
     section: Section
     diagnostics: list[Diagnostic] = dataclasses.field(default_factory=list)
+    #: Page-level assets, keyed so repeats collapse. See
+    #: :meth:`require_head`.
+    head: dict[str, str] = dataclasses.field(default_factory=dict)
 
     @property
     def folder(self) -> str:
@@ -59,6 +62,20 @@ class RenderContext:
 
     def option(self, name: str, default: t.Any = None) -> t.Any:
         return self.section.options.get(name, default)
+
+    def require_head(self, key: str, markup: str) -> None:
+        """Declare markup this section needs once per *page*, not per section.
+
+        A viewer library, an import map, a stylesheet: things that must
+        appear exactly once however many sections use them, and that
+        belong above the fragment rather than inside it. ``key``
+        deduplicates - three 3D models on one page ask for the same
+        loader three times and get one copy.
+
+        The result carries these in :attr:`RenderResult.head`, which a
+        consumer embeds alongside the fragment.
+        """
+        self.head.setdefault(key, markup)
 
     def warn(self, message: str) -> None:
         self.diagnostics.append(
@@ -91,7 +108,6 @@ REGISTRY: dict[str, Renderer] = {}
 #: Named in the spec, not implemented yet. Phase 2, once there is a
 #: file-serving route to hang them on.
 PLANNED: dict[str, str] = {
-    "3dmodel": "needs the Phase 2 file-serving route",
     "jupyter": "needs Phase 2 nbformat parsing",
 }
 

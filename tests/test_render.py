@@ -61,7 +61,7 @@ def test_a_missing_file_is_visible_and_the_rest_still_renders(tmp_path):
 def test_a_planned_type_says_so_rather_than_claiming_to_be_unknown(tmp_path):
     result = build(
         tmp_path,
-        "name: x\nsections:\n  - {type: 3dmodel, path: a.glb}\n",
+        "name: x\nsections:\n  - {type: jupyter, path: a.ipynb}\n",
     )
     assert "not implemented yet" in result.html
     assert "Phase 2" in result.diagnostics[0].message
@@ -224,8 +224,73 @@ class TestExamples:
         errors = [d.message for d in result.errors]
 
         assert "keep-out" in result.html, "the good sections still render"
-        assert len(errors) == 4
+        assert 'class="mav-3d"' in result.html, "so does the 3D model"
+        assert len(errors) == 3
         assert any("assembly-notes.md" in m for m in errors)
-        assert any("'step'" in m for m in errors)
-        assert sum(1 for m in errors if "not implemented yet" in m) == 1
         assert any("torque-spec.pdf" in m for m in errors)
+        assert any("'step'" in m for m in errors)
+
+
+class TestModel3D:
+    """glTF only, and page-level assets declared once."""
+
+    def _folder(self, tmp_path, name="m.glb", options=""):
+        (tmp_path / name).write_bytes(b"glTF\x02\x00\x00\x00")
+        (tmp_path / "artifact.yaml").write_text(
+            f"name: x\nsections:\n  - type: 3dmodel\n    path: {name}\n"
+            + options,
+            encoding="utf-8",
+        )
+        return render_folder(tmp_path)
+
+    def test_renders_a_viewer(self, tmp_path):
+        result = self._folder(tmp_path)
+        assert result.ok
+        assert 'class="mav-3d"' in result.html
+        assert "GLTFLoader" in result.html
+
+    def test_the_import_map_is_page_level_and_emitted_once(self, tmp_path):
+        (tmp_path / "a.glb").write_bytes(b"glTF")
+        (tmp_path / "b.glb").write_bytes(b"glTF")
+        (tmp_path / "artifact.yaml").write_text(
+            "name: x\nsections:\n"
+            "  - {type: 3dmodel, path: a.glb}\n"
+            "  - {type: 3dmodel, path: b.glb}\n",
+            encoding="utf-8",
+        )
+        result = render_folder(tmp_path)
+
+        assert result.html.count("importmap") == 0, "belongs in head, not body"
+        assert result.head.count("importmap") == 1, "once, not once per model"
+        assert result.document().count("importmap") == 1
+
+    def test_a_step_file_says_to_export_gltf(self, tmp_path):
+        result = self._folder(tmp_path, name="part.step")
+        assert result.errors
+        assert "export glTF from your CAD" in result.html
+        assert "tessellated" in result.html
+
+    def test_z_up_is_rotated_into_gltfs_y_up_world(self, tmp_path):
+        assert "rotation.x" in self._folder(
+            tmp_path, options="    options:\n      up: z\n"
+        ).html
+        assert "rotation.x" not in self._folder(tmp_path).html
+
+    def test_camera_is_a_direction_so_any_size_model_is_framed(self, tmp_path):
+        result = self._folder(
+            tmp_path, options="    options:\n      camera: [0.4, 0.3, 1.2]\n"
+        )
+        assert "Vector3(0.4, 0.3, 1.2)" in result.html
+
+        bad = self._folder(tmp_path, options="    options:\n      camera: up\n")
+        assert "Vector3(1.0, 1.0, 1.0)" in bad.html
+        assert "not three numbers" in str(bad.diagnostics)
+
+    def test_a_missing_model_is_reported_like_any_other_file(self, tmp_path):
+        (tmp_path / "artifact.yaml").write_text(
+            "name: x\nsections:\n  - {type: 3dmodel, path: gone.glb}\n",
+            encoding="utf-8",
+        )
+        result = render_folder(tmp_path)
+        assert "gone.glb" in result.html
+        assert result.errors
