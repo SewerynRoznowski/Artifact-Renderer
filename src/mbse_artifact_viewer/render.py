@@ -16,6 +16,7 @@ from __future__ import annotations
 import dataclasses
 import html
 import pathlib
+import re
 
 from . import manifest as manifest_mod
 from . import registry
@@ -67,7 +68,8 @@ EMBED_STYLESHEET = """
   margin-bottom: .8rem; }
 .mav-caption { color: var(--mav-muted); font-size: .92em; margin: 0 0 .6rem; }
 .mav-body { overflow-x: auto; }
-.mav-body svg, .mav-body img { max-width: 100%; height: auto; }
+.mav-body svg, .mav-body img { max-width: 100%; height: auto;
+  max-height: var(--mav-img-max, none); }
 .mav-body table { border-collapse: collapse; }
 .mav-body th, .mav-body td { border: 1px solid var(--mav-line);
   padding: .3rem .55rem; text-align: left; }
@@ -90,7 +92,8 @@ EMBED_STYLESHEET = """
 .mav-embed { width: 100%; border: 1px solid var(--mav-line); display: block;
   background: #fff; }
 .mav-nb-out { margin: .6rem 0; overflow-x: auto; }
-.mav-nb-out img, .mav-nb-out svg { max-width: 100%; height: auto; }
+.mav-nb-out img, .mav-nb-out svg { max-width: 100%; height: auto;
+  max-height: var(--mav-img-max, none); }
 .mav-nb-out table { border-collapse: collapse; font-size: .92em; }
 .mav-nb-out th, .mav-nb-out td { border: 1px solid var(--mav-line);
   padding: .25rem .5rem; text-align: left; }
@@ -396,13 +399,45 @@ def _render_section(
     # something they have to undo before they can read the page.
     label = section.description or _default_label(section)
     return (
-        f'<details class="mav-section"{attr}{"" if collapsed else " open"}>\n'
+        f'<details class="mav-section"{attr}{_image_cap(ctx)}'
+        f'{"" if collapsed else " open"}>\n'
         f'<summary class="mav-summary">'
         f'<span class="mav-summary-label">{html.escape(label)}</span>'
         f'<span class="mav-summary-meta">{html.escape(section.type)}'
         f"{_source_link(source, parsed, section)}</span></summary>{doc}\n"
         f'<div class="mav-body">\n{body}\n</div>\n</details>'
     )
+
+
+def _image_cap(ctx: registry.RenderContext) -> str:
+    """``max_height`` as a CSS custom property on the section.
+
+    A number of pixels, or a CSS length if you want one - ``"60vh"``
+    scales with the window, which is often what a photograph wants. It is
+    set on the section rather than written into the content, so an image
+    is capped wherever it came from: Markdown, an HTML fragment, or a
+    notebook output. Width is already capped at the container.
+    """
+    value = ctx.option("max_height")
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        ctx.warn(f"option max_height={value!r} is not a length; ignored")
+        return ""
+    length = f"{value}px" if isinstance(value, (int, float)) else str(value)
+    if not _LENGTH.fullmatch(length.strip()):
+        ctx.warn(
+            f"option max_height={value!r} is not a length like 400 or "
+            '"60vh"; ignored'
+        )
+        return ""
+    return f' style="--mav-img-max:{html.escape(length.strip(), quote=True)}"'
+
+
+#: A CSS length: a number and an optional unit. Deliberately narrow -
+#: this value goes into a style attribute, and anything that is not a
+#: plain length has no business there.
+_LENGTH = re.compile(r"\d+(?:\.\d+)?(?:px|em|rem|vh|vw|%)?")
 
 
 def _default_label(section: manifest_mod.Section) -> str:

@@ -615,3 +615,41 @@ class TestCollapsedOption:
         assert "mavToggleBound" in result.head
         assert "mavToggleBound" not in result.html, "not once per artifact"
         assert result.document().count("__mavToggleBound = true") == 1
+
+
+class TestImageCap:
+    """`max_height` caps an image wherever it came from."""
+
+    def _build(self, tmp_path, options=""):
+        (tmp_path / "a.md").write_text("![x](photo.webp)", encoding="utf-8")
+        (tmp_path / "artifact.yaml").write_text(
+            "name: x\nsections:\n  - type: markdown\n    path: a.md\n"
+            + options,
+            encoding="utf-8",
+        )
+        return render_folder(tmp_path)
+
+    def test_uncapped_by_default(self, tmp_path):
+        assert "--mav-img-max" not in self._build(tmp_path).html
+
+    def test_a_number_is_pixels(self, tmp_path):
+        result = self._build(tmp_path, "    options: {max_height: 320}\n")
+        assert "--mav-img-max:320px" in result.html
+        assert result.ok
+
+    def test_a_css_length_is_kept(self, tmp_path):
+        """60vh scales with the window, which is what a photo often wants."""
+        result = self._build(tmp_path, "    options: {max_height: 60vh}\n")
+        assert "--mav-img-max:60vh" in result.html
+
+    def test_nonsense_warns_and_is_dropped(self, tmp_path):
+        result = self._build(tmp_path, "    options: {max_height: huge}\n")
+        assert "--mav-img-max" not in result.html
+        assert "is not a length" in str(result.diagnostics)
+
+    def test_it_is_universal_not_per_type(self, tmp_path):
+        """Capping an image belongs to the slot, not to the type that
+        produced it - so no renderer has to declare it, and none warns
+        about it as an option it does not understand."""
+        result = self._build(tmp_path, "    options: {max_height: 200}\n")
+        assert result.diagnostics == []

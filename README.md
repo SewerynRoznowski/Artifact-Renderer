@@ -165,6 +165,21 @@ is fitted to the model. The viewer has a Fullscreen button; there is no
 separate tab, since that would mean another page to serve and another
 WebGL context for the same pixels.
 
+`max_height` works on any section, and is handled by the section itself
+rather than by a renderer — capping an image belongs to the slot the
+content sits in, not to the type that produced it, so it applies equally
+to a Markdown image, an HTML fragment and a notebook output. A number is
+pixels; a CSS length is kept as written, and `60vh` scales with the
+window, which is usually what a photograph wants. Width is already capped
+at the container.
+
+```yaml
+  - type: markdown
+    path: documentation.md
+    options:
+      max_height: 320
+```
+
 An option this renderer doesn't understand is a warning, never an error,
 so a manifest written against a newer version stays usable on an older
 one.

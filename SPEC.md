@@ -167,6 +167,7 @@ with none must still render sensibly.
 
 | Type | Option | Meaning |
 |---|---|---|
+| *any* | `max_height` | cap the height of images in the section — a number (px) or a CSS length |
 | `wireviz` | `wrap` | `auto` (default), `never`, `always` — see below |
 | `wireviz` | `designator` | reference designator for a wrapped template (default `X1`) |
 | `wireviz` | `prepend` | file(s) whose text goes in front of the harness before parsing |

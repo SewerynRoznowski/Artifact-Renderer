@@ -103,6 +103,13 @@ class Renderer:
     options: frozenset[str] = frozenset()
 
 
+#: Options the section machinery handles itself, for every type. A
+#: renderer does not declare these and is not asked about them: capping
+#: an image is a property of the slot the content sits in, not of the
+#: thing that produced it, and it would otherwise have to be repeated in
+#: every type that can contain an image.
+UNIVERSAL_OPTIONS = frozenset({"max_height"})
+
 REGISTRY: dict[str, Renderer] = {}
 
 #: Named in the spec but not implemented. Empty now that every type in
@@ -133,7 +140,9 @@ def known_types() -> list[str]:
 
 def check_options(ctx: RenderContext, spec: Renderer) -> None:
     """Warn about option keys this renderer doesn't understand."""
-    for key in sorted(set(ctx.section.options) - spec.options):
+    for key in sorted(
+        set(ctx.section.options) - spec.options - UNIVERSAL_OPTIONS
+    ):
         ctx.warn(
             f"{spec.name!r} does not understand option {key!r}, ignored"
             + (
@@ -146,6 +155,7 @@ def check_options(ctx: RenderContext, spec: Renderer) -> None:
 
 __all__ = [
     "PLANNED",
+    "UNIVERSAL_OPTIONS",
     "REGISTRY",
     "Manifest",
     "RenderContext",
