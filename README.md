@@ -165,6 +165,26 @@ An option this renderer doesn't understand is a warning, never an error,
 so a manifest written against a newer version stays usable on an older
 one.
 
+### Collapsing, links and printing
+
+Every artifact and every section is a `<details>`, open by default:
+collapsing is something a reader chooses, not something they have to undo
+before they can read the page. Collapsed, an artifact is its name and
+description; a section is its label and the file it came from.
+
+That header line carries a link to the section's own file — the PDF, the
+notebook, the harness YAML — opening in a new tab. Every type has one,
+not just the ones with a viewer, because an engineer who wants the source
+rather than the rendering should not have to hunt for it.
+
+It also matters on paper. A PDF in an `<iframe>` and a WebGL canvas both
+print blank, so a printed report used to be a page of empty boxes. Under
+`@media print` neither is printed at all; what remains is that header
+line, which names the content and links to it. A `3dmodel` has a
+Fullscreen button instead of a second tab — a viewer in another tab would
+mean another page to serve and another context to build, for the same
+pixels.
+
 ### When something is missing
 
 A page renders as much as it can. One bad section never takes down the

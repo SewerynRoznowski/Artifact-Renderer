@@ -206,6 +206,19 @@ is a documented JSON schema and the renderer reads four keys of it. A
 library that exists to *validate* notebooks earns its place in a tool
 that writes them, not one that shows them.
 
+### Collapsing and print
+
+Each artifact and each section renders as a `<details>`, open by default.
+Collapsed, a section shows one line: its label, its type, and a link to
+the file it was rendered from. Every section type carries that link, not
+only the ones with a viewer.
+
+The line exists because something has to survive the cases where the
+content cannot be shown. A PDF in an iframe and a WebGL canvas both print
+blank, so under `@media print` neither is printed and the line is what
+appears in its place — a named, linked reference instead of an empty
+rectangle. The same line is what a collapsed section shows on screen.
+
 ### Missing and malformed content
 
 A page renders as much as it can. One broken section never takes down the

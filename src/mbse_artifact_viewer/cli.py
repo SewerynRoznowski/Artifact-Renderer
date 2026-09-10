@@ -60,6 +60,14 @@ def cmd_render(args: argparse.Namespace) -> int:
         path.write_text(output, encoding="utf-8")
         print(f"  wrote {path}", file=sys.stderr)
     else:
+        # The output is a UTF-8 HTML document whatever the console's
+        # encoding happens to be. On Windows that is cp1252, which cannot
+        # represent most of what a rendered page contains - one arrow in
+        # a link was enough to end the command in a traceback.
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+        except (AttributeError, OSError):
+            pass
         sys.stdout.write(output)
     return _report(result)
 

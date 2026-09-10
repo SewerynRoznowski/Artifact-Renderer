@@ -111,6 +111,25 @@ _VIEWER = """<script>
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     mount.appendChild(renderer.domElement);
 
+    /* Fullscreen rather than a new tab: a WebGL viewer in a second tab
+       would mean a second page to serve and a second context to set up,
+       for the same pixels. The button is created here, not in the
+       markup, so it exists only once there is something to enlarge. */
+    if (mount.requestFullscreen) {{
+      var full = document.createElement("button");
+      full.type = "button";
+      full.className = "mav-3d-full";
+      full.textContent = "Fullscreen";
+      full.addEventListener("click", function () {{
+        if (document.fullscreenElement === mount) {{
+          document.exitFullscreen();
+        }} else {{
+          mount.requestFullscreen();
+        }}
+      }});
+      mount.appendChild(full);
+    }}
+
     var scene = new THREE.Scene();
     /* An environment map, not just lights: an unlit metallic PBR
        material renders as a black blob. */

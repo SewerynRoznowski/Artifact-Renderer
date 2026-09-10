@@ -483,3 +483,83 @@ class TestWirevizPrepend:
         assert "prepend: 'shared/gone.yaml' does not exist" in str(
             result.errors[0].message
         )
+
+
+class TestCollapsingAndLinks:
+    """Every artifact and section collapses to a line that stands alone."""
+
+    def _build(self, tmp_path):
+        (tmp_path / "a.md").write_text("body text", encoding="utf-8")
+        (tmp_path / "artifact.yaml").write_text(
+            "name: Bracket\ndescription: A mounting bracket.\n"
+            "sections:\n"
+            "  - {type: markdown, path: a.md, description: The notes.}\n",
+            encoding="utf-8",
+        )
+        return render_folder(tmp_path)
+
+    def test_the_artifact_collapses_to_its_name_and_description(
+        self, tmp_path
+    ):
+        result = self._build(tmp_path)
+        assert '<details class="mav-artifact" open>' in result.html
+        assert '<summary class="mav-head">' in result.html
+        assert "Bracket" in result.html
+        assert "A mounting bracket." in result.html
+
+    def test_each_section_collapses_on_its_own_and_starts_open(self, tmp_path):
+        """Open by default: collapsing is a choice, not a chore to undo."""
+        result = self._build(tmp_path)
+        assert '<details class="mav-section" data-type="markdown" open>' in (
+            result.html
+        )
+        assert '<span class="mav-summary-label">The notes.</span>' in result.html
+
+    def test_a_section_without_a_description_is_labelled_by_its_file(
+        self, tmp_path
+    ):
+        (tmp_path / "a.md").write_text("body", encoding="utf-8")
+        (tmp_path / "artifact.yaml").write_text(
+            "name: x\nsections:\n  - {type: markdown, path: a.md}\n",
+            encoding="utf-8",
+        )
+        result = render_folder(tmp_path)
+        assert '<span class="mav-summary-label">a.md</span>' in result.html
+
+    def test_every_section_links_to_the_file_it_came_from(self, tmp_path):
+        """Not only the types with a viewer - the notebook, the harness
+        YAML and the Markdown are all worth opening directly."""
+        result = self._build(tmp_path)
+        assert 'class="mav-open" href="/a.md"' in result.html
+        assert 'target="_blank"' in result.html
+
+    def test_no_link_when_the_consumer_cannot_serve_files(self, tmp_path):
+        class NoUrls:
+            def __init__(self, inner):
+                self._inner = inner
+
+            def read_bytes(self, path):
+                return self._inner.read_bytes(path)
+
+            def exists(self, path):
+                return self._inner.exists(path)
+
+        (tmp_path / "a.md").write_text("body", encoding="utf-8")
+        (tmp_path / "artifact.yaml").write_text(
+            "name: x\nsections:\n  - {type: markdown, path: a.md}\n",
+            encoding="utf-8",
+        )
+        result = render_artifact(NoUrls(LocalFileSource(tmp_path)), "")
+        assert "mav-open" not in result.html
+        assert "body" in result.html, "the section itself still renders"
+
+
+def test_unprintable_frames_are_left_out_of_print():
+    """A PDF iframe and a WebGL canvas both print blank, so a report came
+    out as a page of empty boxes."""
+    from mbse_artifact_viewer import EMBED_STYLESHEET
+
+    print_rules = EMBED_STYLESHEET.split("@media print")[1]
+    for selector in (".mav-pdf", ".mav-3d", ".mav-embed"):
+        assert selector in print_rules
+    assert "display: none" in print_rules

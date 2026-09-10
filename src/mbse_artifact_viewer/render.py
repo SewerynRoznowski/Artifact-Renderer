@@ -21,7 +21,8 @@ from . import manifest as manifest_mod
 from . import registry
 from .errors import ArtifactError, Diagnostic, Level, SectionError
 from .renderers import markdown_
-from .sources import FileSource, LocalFileSource
+from .paths import join_relative
+from .sources import FileSource, LocalFileSource, url_for
 
 EMBED_STYLESHEET = """
 /* Structure only: sizes, borders, spacing, and the frames that content
@@ -40,12 +41,25 @@ EMBED_STYLESHEET = """
   --mav-warn-line: #c9922e;
   --mav-warn-bg: color-mix(in srgb, #c9922e 14%, transparent); }
 .mav-head { border-bottom: 1px solid var(--mav-line); margin-bottom: 1.5rem;
-  padding-bottom: .75rem; }
-.mav-head h1 { margin: 0 0 .25rem; }
-.mav-lede { color: var(--mav-muted); margin: 0; }
+  padding-bottom: .75rem; cursor: pointer; }
+.mav-head h1 { margin: 0 0 .25rem; display: inline-block; }
+.mav-lede { color: var(--mav-muted); display: block; }
 .mav-section { border-top: 1px solid var(--mav-line); margin-top: 1.5rem;
   padding-top: 1.25rem; }
 .mav-section:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+/* The section header doubles as the collapse control, so it carries the
+   label on the left and what the section came from on the right - the
+   one line that has to stand on its own when the section is closed, or
+   when the page is printed and the viewer inside it cannot be. */
+.mav-summary { cursor: pointer; display: flex; flex-wrap: wrap;
+  gap: .3rem 1rem; align-items: baseline; justify-content: space-between;
+  margin-bottom: .6rem; }
+.mav-summary-label { font-weight: 600; }
+.mav-summary-meta { color: var(--mav-muted); font-size: .88em;
+  display: flex; gap: .6rem; align-items: baseline; }
+.mav-open { white-space: nowrap; }
+.mav-artifact[open] > .mav-head, .mav-section[open] > .mav-summary {
+  margin-bottom: .8rem; }
 .mav-caption { color: var(--mav-muted); font-size: .92em; margin: 0 0 .6rem; }
 .mav-body { overflow-x: auto; }
 .mav-body svg, .mav-body img { max-width: 100%; height: auto; }
@@ -56,8 +70,13 @@ EMBED_STYLESHEET = """
   padding: .7rem .9rem; }
 .mav-pdf { width: 100%; border: 1px solid var(--mav-line); display: block;
   background: #fff; }
-.mav-3d { width: 100%; border: 1px solid var(--mav-line);
+.mav-3d { width: 100%; border: 1px solid var(--mav-line); position: relative;
   background: var(--mav-wash); overflow: hidden; touch-action: none; }
+.mav-3d-full { position: absolute; top: .5rem; right: .5rem; z-index: 1;
+  font: inherit; font-size: .85em; line-height: 1; padding: .35rem .6rem;
+  cursor: pointer; color: inherit; background: var(--mav-wash);
+  border: 1px solid var(--mav-line); border-radius: .25rem; }
+.mav-3d:fullscreen { height: 100% !important; border: 0; }
 .mav-3d canvas { display: block; }
 .mav-3d-fallback { color: var(--mav-muted); font-size: .92em; margin: 0;
   padding: 1.2rem; text-align: center; }
@@ -83,6 +102,23 @@ EMBED_STYLESHEET = """
 .mav-problem-title { font-weight: 600; }
 .mav-problem-detail { color: var(--mav-muted); font-size: .92em; }
 .mav-problem code { font-size: .92em; }
+
+/* Print. An iframe holding a PDF and a WebGL canvas both come out blank
+   on paper, so a printed report showed a page of empty boxes. Neither is
+   printable in any useful sense, so neither is printed: what remains is
+   the summary line, which names the content and links to the file it
+   came from. A collapsed section stays collapsed - that was a choice -
+   but nothing that was open turns into a blank rectangle. */
+@media print {
+  .mav-pdf, .mav-3d, .mav-embed { display: none; }
+  .mav-summary, .mav-head { cursor: auto; }
+  .mav-summary-meta::after { content: " (not printable - see the link)";
+    font-style: italic; }
+  .mav-section:not(:has(.mav-pdf, .mav-3d, .mav-embed)) .mav-summary-meta::after
+    { content: ""; }
+  .mav-section, .mav-artifact { break-inside: avoid; }
+  .mav-body { overflow: visible; }
+}
 """
 
 #: Typography and a palette, for a page that has none of its own - the
@@ -152,7 +188,8 @@ def render_artifact(source: FileSource, folder: str = "") -> RenderResult:
         return RenderResult(_error_card(err), [diagnostic])
 
     parts = [
-        "<article class=\"mav\">",
+        '<article class="mav">',
+        '<details class="mav-artifact" open>',
         _head(parsed),
     ]
     head_assets: dict[str, str] = {}
@@ -164,6 +201,7 @@ def render_artifact(source: FileSource, folder: str = "") -> RenderResult:
         parts.append(
             _render_section(source, parsed, section, diagnostics, head_assets)
         )
+    parts.append("</details>")
     parts.append("</article>")
 
     return RenderResult(
@@ -197,14 +235,49 @@ def render_folder(
 
 
 def _head(parsed: manifest_mod.Manifest) -> str:
+    """The artifact's summary: the name and description, always shown.
+
+    It is a ``<summary>`` because the artifact is a ``<details>``:
+    collapsing one leaves exactly this line, which is what a reader
+    scanning a page of several artifacts wants, and what a printed page
+    can show in place of an embedded viewer it cannot draw.
+    """
     lede = (
-        f'\n<p class="mav-lede">{html.escape(parsed.description)}</p>'
+        f'\n<span class="mav-lede">{html.escape(parsed.description)}</span>'
         if parsed.description
         else ""
     )
     return (
-        f'<header class="mav-head">\n<h1>{html.escape(parsed.name)}</h1>'
-        f"{lede}\n</header>"
+        f'<summary class="mav-head">\n<h1>{html.escape(parsed.name)}</h1>'
+        f"{lede}\n</summary>"
+    )
+
+
+def _source_link(
+    source: FileSource,
+    parsed: manifest_mod.Manifest,
+    section: manifest_mod.Section,
+) -> str:
+    """A link to the section's own file, for opening in a new tab.
+
+    Every section has a ``path``, so every section can offer the thing it
+    was rendered from - the PDF, the notebook, the harness YAML. On a
+    page that cannot show a viewer (print, or a browser without WebGL)
+    this is what remains, and an engineer who wants the source rather
+    than the rendering has it either way.
+    """
+    if not section.path:
+        return ""
+    try:
+        url = url_for(source, join_relative(parsed.folder, section.path))
+    except Exception:
+        return ""
+    if url is None:
+        return ""
+    name = section.path.rpartition("/")[2]
+    return (
+        f'<a class="mav-open" href="{html.escape(url)}" target="_blank" '
+        f'rel="noopener">{html.escape(name)} ↗</a>'
     )
 
 
@@ -240,13 +313,11 @@ def _render_section(
     )
     registry.check_options(ctx, spec)
 
-    head = ""
-    if section.description:
-        head += (
-            f'\n<p class="mav-caption">{html.escape(section.description)}</p>'
-        )
-    if section.doc:
-        head += "\n" + _doc_block(source, parsed, section.doc, section)
+    doc = (
+        "\n" + _doc_block(source, parsed, section.doc, section)
+        if section.doc
+        else ""
+    )
 
     try:
         body = spec.func(ctx)
@@ -262,10 +333,24 @@ def _render_section(
         diagnostics.append(_error(parsed, section, message))
         return _problem(section, message, attr)
 
+    # Open by default: collapsing is something a reader chooses, not
+    # something they have to undo before they can read the page.
+    label = section.description or _default_label(section)
     return (
-        f'<section class="mav-section"{attr}>{head}\n'
-        f'<div class="mav-body">\n{body}\n</div>\n</section>'
+        f'<details class="mav-section"{attr} open>\n'
+        f'<summary class="mav-summary">'
+        f'<span class="mav-summary-label">{html.escape(label)}</span>'
+        f'<span class="mav-summary-meta">{html.escape(section.type)}'
+        f"{_source_link(source, parsed, section)}</span></summary>{doc}\n"
+        f'<div class="mav-body">\n{body}\n</div>\n</details>'
     )
+
+
+def _default_label(section: manifest_mod.Section) -> str:
+    """What to call a section that carries no description."""
+    if section.path:
+        return section.path.rpartition("/")[2]
+    return section.type
 
 
 def _doc_block(
